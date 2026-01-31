@@ -1,1 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Overcooked Cafe</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Muji Style Colors */
+        :root {
+            --muji-bg: #F5F3F0;       /* 暖米色 */
+            --muji-wood: #E0D7C6;     /* 木質色 */
+            --muji-text: #4A4A4A;     /* 深灰色 */
+            --muji-accent: #8C7E6A;   /* 亞麻色 */
+            --muji-white: #FFFFFF;
+        }
 
+        body {
+            font-family: "Helvetica Neue", "Helvetica", "PingFang HK", "Microsoft JhengHei", sans-serif;
+            background-color: var(--muji-bg);
+            color: var(--muji-text);
+            margin: 0;
+            line-height: 1.6;
+            padding-bottom: 100px;
+        }
+
+        header {
+            background: var(--muji-white);
+            padding: 40px 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--muji-wood);
+        }
+
+        h1 {
+            font-weight: 300;
+            letter-spacing: 4px;
+            margin: 0;
+            font-size: 1.8rem;
+            cursor: pointer;
+        }
+
+        #mode-status {
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            color: var(--muji-accent);
+            margin-top: 10px;
+            text-transform: uppercase;
+        }
+
+        /* Tabs - Muji Minimalist */
+        .tabs {
+            display: flex;
+            overflow-x: auto;
+            background: var(--muji-white);
+            padding: 10px 15px;
+            gap: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid #eee;
+            scrollbar-width: none;
+        }
+        .tabs::-webkit-scrollbar { display: none; }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 8px 0;
+            color: #999;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active {
+            color: var(--muji-text);
+            border-bottom: 2px solid var(--muji-accent);
+        }
+
+        /* Menu Items */
+        .menu-list { padding: 20px; }
+        .menu-item {
+            background: var(--muji-white);
+            margin-bottom: 25px;
+            overflow: hidden;
+            border-radius: 4px; /* Muji 偏向方正一點 */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+            position: relative;
+        }
+
+        .item-img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            filter: sepia(10%) contrast(90%); /* 統一照片色調 */
+        }
+
+        .item-info { padding: 15px; text-align: left; }
+        .item-name { font-size: 1.1rem; font-weight: 400; margin: 0; }
+        .item-desc { font-size: 0.8rem; color: #888; margin: 8px 0 12px; }
+        .item-price { font-size: 1rem; color: var(--muji-text); }
+
+        /* Buttons */
+        .add-btn {
+            position: absolute;
+            right: 15px;
+            bottom: 15px;
+            background: none;
+            border: 1px solid var(--muji-wood);
+            color: var(--muji-accent);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        .admin-controls {
+            display: none;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .admin-mode .admin-controls { display: block; }
+
+        /* Cart Bar */
+        .cart-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(74, 74, 74, 0.9);
+            color: var(--muji-white);
+            padding: 15px 25px;
+            border-radius: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .order-btn {
+            background: var(--muji-white);
+            color: var(--muji-text);
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .unavailable { filter: grayscale(1); opacity: 0.5; }
+    </style>
+</head>
+<body class="guest-mode">
+
+<header>
+    <h1 onclick="askForAdmin()">OVERCOOKED CAFE</h1>
+    <div id="mode-status">Minimalist Home Dining</div>
+</header>
+
+<div id="category-tabs" class="tabs"></div>
+
+<div id="menu-container" class="menu-list">
+    <p style="text-align: center; color: #999;">Loading Menu...</p>
+</div>
+
+<div class="cart-bar">
+    <div style="font-size: 0.9rem;">Items: <span id="cart-count">0</span> / $<span id="cart-total">0</span></div>
+    <button class="order-btn" onclick="submitOrder()">落單 ORDER</button>
+</div>
+
+<script>
+    const SUPABASE_URL = 'https://myrhatzdypiwwgmmfbuw.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_bnnah-2fsCaQnKZDoKNJQw_NuYQVvKi';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let cart = [];
+    let isAdmin = false;
+    let fullMenu = [];
+
+    async function init() {
+        const { data, error } = await _supabase.from('overcooked_menu').select('*').order('id');
+        if (error) {
+            console.error(error);
+            document.getElementById('menu-container').innerHTML = "Database Connection Error.";
+            return;
+        }
+        fullMenu = data;
+        
+        const cats = [...new Set(data.map(i => i.category))];
+        document.getElementById('category-tabs').innerHTML = cats.map((c, idx) => 
+            `<button class="tab-btn ${idx===0?'active':''}" onclick="changeTab(this, '${c}')">${c}</button>`
+        ).join('');
+        
+        render(cats[0]);
+    }
+
+    function render(cat) {
+        const container = document.getElementById('menu-container');
+        container.innerHTML = '';
+        fullMenu.filter(i => i.category === cat).forEach(item => {
+            if (!isAdmin && !item.is_available) return;
+            const div = document.createElement('div');
+            div.className = `menu-item ${!item.is_available ? 'unavailable' : ''}`;
+            div.innerHTML = `
+                <img src="${item.image_url}" class="item-img">
+                <div class="item-info">
+                    <p class="item-name">${item.name}</p>
+                    <p class="item-desc">${item.description}</p>
+                    <span class="item-price">$${item.price}</span>
+                    <div class="admin-controls">
+                        <button onclick="toggleStock('${item.id}', ${item.is_available})">
+                            ${item.is_available ? 'Set Sold Out' : 'Set Available'}
+                        </button>
+                    </div>
+                </div>
+                ${item.is_available ? `<button class="add-btn" onclick="addToCart('${item.name}', ${item.price})">+</button>` : ''}
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function changeTab(btn, cat) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        render(cat);
+    }
+
+    function addToCart(name, price) {
+        cart.push({name, price});
+        document.getElementById('cart-count').innerText = cart.length;
+        document.getElementById('cart-total').innerText = cart.reduce((s, i) => s + i.price, 0);
+    }
+
+    async function submitOrder() {
+        if (cart.length === 0) return alert("揀啲嘢食先啦！");
+        const table = prompt("老闆想知你坐邊？(例如：梳化/餐桌)") || "未知";
+        const summary = cart.reduce((a, c) => { a[c.name] = (a[c.name] || 0) + 1; return a; }, {});
+        const itemsStr = Object.entries(summary).map(([n, q]) => `${n}x${q}`).join(", ");
+        
+        const { error } = await _supabase.from('overcooked_orders').insert([{ 
+            items: itemsStr, 
+            total_price: parseInt(document.getElementById('cart-total').innerText),
+            table_no: table
+        }]);
+        
+        if (!error) { 
+            alert("落單成功！請慢用。"); 
+            cart = []; 
+            document.getElementById('cart-count').innerText = 0;
+            document.getElementById('cart-total').innerText = 0;
+        }
+    }
+
+    function askForAdmin() {
+        if (prompt("輸入老闆暗號：") === "1234") {
+            isAdmin = true;
+            document.body.classList.add('admin-mode');
+            document.getElementById('mode-status').innerText = "ADMIN MODE / 管理中";
+            init();
+            setupRealtime();
+        } else { alert("咁想改你入廚房煮🤤"); }
+    }
+
+    async function toggleStock(id, status) {
+        await _supabase.from('overcooked_menu').update({ is_available: !status }).eq('id', id);
+        init();
+    }
+
+    function setupRealtime() {
+        _supabase.channel('overcooked_orders').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'overcooked_orders' }, payload => {
+            new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play();
+            alert(`🛎️ 新訂單！\n項目：${payload.new.items}\n位置：${payload.new.table_no}`);
+        }).subscribe();
+    }
+
+    init();
+</script>
+</body>
+</html>
