@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Overcooked Cafe</title>
+    <title>OVERCOOKED CAFE</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -21,17 +21,16 @@
             color: var(--lv-dark);
             margin: 0;
             line-height: 1.6;
-            padding-bottom: 150px;
+            padding-bottom: 120px; /* 留位給購物車 */
         }
 
         header {
             background: var(--lv-white);
-            padding: 50px 20px;
+            padding: 40px 20px;
             text-align: center;
             border-bottom: 1px solid var(--lv-gold);
         }
 
-        /* 老闆 Login 位：點擊此標題 */
         h1 { 
             font-weight: 300; 
             letter-spacing: 6px; 
@@ -49,30 +48,42 @@
             letter-spacing: 2px; 
         }
 
-        /* 分類 Tab */
+        /* --- 分類 Tab 優化 --- */
         .tabs {
             display: flex;
             overflow-x: auto;
             background: var(--lv-white);
-            padding: 12px 15px;
-            gap: 25px;
+            padding: 0 15px;
+            gap: 20px;
             position: sticky;
             top: 0;
             z-index: 100;
             border-bottom: 1px solid #eee;
             scrollbar-width: none;
+            align-items: center;
         }
         .tabs::-webkit-scrollbar { display: none; }
+        
         .tab-btn {
-            background: none; border: none; padding: 8px 0; color: #aaa;
+            background: none; border: none; padding: 15px 5px; color: #aaa;
             font-size: 0.85rem; white-space: nowrap; cursor: pointer;
             transition: 0.3s; border-bottom: 2px solid transparent;
-            font-weight: 500;
+            font-weight: 500; letter-spacing: 1px;
         }
         .tab-btn.active { color: var(--lv-gold); border-bottom: 2px solid var(--lv-gold); }
+        
+        /* 紀錄 Tab 特別樣式 */
+        .tab-btn.record-tab {
+            margin-left: auto; /* 推到最右邊 */
+            color: var(--lv-dark);
+        }
+        .tab-btn.record-tab.active { border-bottom: 2px solid var(--lv-dark); }
+
+        /* --- 容器切換邏輯 --- */
+        .view-container { display: none; padding: 20px; }
+        .view-container.active { display: block; }
 
         /* 餐點列表 */
-        .menu-list { padding: 20px; }
         .menu-item {
             background: var(--lv-white); margin-bottom: 30px;
             border-radius: 2px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);
@@ -95,31 +106,37 @@
         }
         .add-btn:active { transform: scale(0.9); background: var(--lv-gold); }
 
-        /* 購物車 Bar */
+        /* --- 3. 購物車 Bar 排版修復 --- */
         .cart-bar {
             position: fixed; bottom: 25px; left: 20px; right: 20px;
             background: var(--lv-dark); color: var(--lv-white);
-            padding: 14px 28px; border-radius: 4px;
-            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 20px; border-radius: 4px;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
             backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 1000;
+            flex-wrap: nowrap; /* 禁止換行 */
         }
+        
+        .cart-info {
+            font-size: 0.8rem; 
+            letter-spacing: 1px;
+            white-space: nowrap; /* 強制不換行 */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-right: 10px;
+        }
+
         .order-btn {
             background: var(--lv-gold); color: var(--lv-white);
-            border: none; padding: 10px 25px; border-radius: 2px;
+            border: none; padding: 10px 20px; border-radius: 2px;
             font-size: 0.8rem; font-weight: 600; cursor: pointer;
             letter-spacing: 1px;
+            white-space: nowrap; /* 強制不換行 */
+            flex-shrink: 0; /* 防止按鈕被壓縮 */
         }
 
         /* Order 紀錄區 */
-        .history-section {
-            padding: 25px 20px; margin-top: 30px;
-            background: var(--lv-white); border-top: 1px solid var(--lv-gold);
-        }
-        .history-title { 
-            font-size: 0.85rem; font-weight: 600; margin-bottom: 20px; 
-            color: var(--lv-gold); display: flex; justify-content: space-between; align-items: center;
-            letter-spacing: 1px;
-        }
         .history-card {
             background: #FDFCFB; padding: 15px; border-radius: 2px;
             margin-bottom: 12px; font-size: 0.85rem; 
@@ -127,47 +144,70 @@
             border-left: 4px solid var(--lv-gold);
         }
         .history-time { font-size: 0.7rem; color: #999; margin-bottom: 6px; text-transform: uppercase; }
+        
+        /* 紀錄頁面按鈕 */
+        .action-area { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
+        
+        /* 客人結帳按鈕 */
+        .guest-checkout-btn {
+            background: var(--lv-dark); color: #fff; border: none;
+            padding: 12px 30px; font-size: 0.9rem; letter-spacing: 2px;
+            cursor: pointer; width: 100%; border-radius: 2px;
+        }
 
         /* Admin 專用樣式 */
         .admin-controls { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; }
         .admin-mode .admin-controls { display: block; }
+        
         .clear-history-btn { 
-            display: none; background: var(--lv-red); color: #fff; border: none; 
-            padding: 6px 14px; border-radius: 2px; font-size: 0.7rem; cursor: pointer;
-            letter-spacing: 1px;
+            display: none; /* 預設隱藏 */
+            background: var(--lv-red); color: #fff; border: none; 
+            padding: 12px 30px; border-radius: 2px; font-size: 0.8rem; cursor: pointer;
+            letter-spacing: 1px; width: 100%;
         }
-        .admin-mode .clear-history-btn { display: inline-block; }
+        .admin-mode .clear-history-btn { display: inline-block; } /* Admin 可見 */
+        .admin-mode .guest-checkout-btn { display: none; } /* Admin 隱藏假結帳 */
+
         .unavailable { filter: grayscale(1); opacity: 0.4; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1 onclick="askForAdmin()">LV CAFE BY OVERCOOKED</h1>
+    <h1 onclick="askForAdmin()">OVERCOOKED CAFE</h1>
     <div id="mode-status">L'Art de Vivre - 活出藝術</div>
 </header>
 
-<nav id="category-tabs" class="tabs"></nav>
+<nav id="category-tabs" class="tabs">
+    </nav>
 
-<main id="menu-container" class="menu-list"></main>
+<main id="menu-view" class="view-container active">
+    <div id="menu-container"></div>
+</main>
 
-<section class="history-section">
-    <div class="history-title">
-        <span>GUEST ORDERS 點餐紀錄</span>
-        <button class="clear-history-btn" onclick="clearAllOrders()">CLEAR ALL 清空紀錄</button>
+<section id="history-view" class="view-container">
+    <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 20px; color: var(--lv-dark); letter-spacing: 1px; text-align: center;">
+        TABLE RECORDS
     </div>
+    
     <div id="order-history-list">
         <p style="font-size: 0.8rem; color: #ccc; text-align: center;">暫無紀錄</p>
     </div>
+
+    <div class="action-area">
+        <button class="guest-checkout-btn" onclick="guestCheckout()">VIP CHECKOUT 結帳</button>
+        <button class="clear-history-btn" onclick="clearAllOrders()">CLEAR ALL 清空紀錄</button>
+    </div>
 </section>
 
-<section class="cart-bar">
-    <div style="font-size: 0.8rem; letter-spacing: 1px;">SELECTED <span id="cart-count">0</span> / HK$ <span id="cart-total">0</span></div>
+<section class="cart-bar" id="cart-bar">
+    <div class="cart-info">
+        SELECTED <span id="cart-count">0</span> / HK$ <span id="cart-total">0</span>
+    </div>
     <button class="order-btn" onclick="submitOrder()">PLACE ORDER 落單</button>
 </section>
 
 <script>
-    // 請確保這裡的 URL 和 KEY 是正確的
     const SUPABASE_URL = 'https://myrhatzdypiwwgmmfbuw.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_bnnah-2fsCaQnKZDoKNJQw_NuYQVvKi';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -177,26 +217,60 @@
     let fullMenu = [];
 
     async function init() {
+        // 獲取菜單
         const { data: menuData, error: menuError } = await _supabase
             .from('overcooked_menu')
             .select('*')
             .order('"sort category"', { ascending: true })
             .order('"sort name"', { ascending: true });
 
-        if (menuError) {
-            console.error(menuError);
-            return;
-        }
-        fullMenu = menuData;
+        if (menuError) console.error(menuError);
+        else fullMenu = menuData || [];
 
-        fetchOrders();
-
+        // 渲染 Tab
         const cats = [...new Set(fullMenu.map(i => i.category))];
-        document.getElementById('category-tabs').innerHTML = cats.map((c, idx) => 
+        const tabsContainer = document.getElementById('category-tabs');
+        
+        let tabsHtml = cats.map((c, idx) => 
             `<button class="tab-btn ${idx===0?'active':''}" onclick="changeTab(this, '${c}')">${c}</button>`
         ).join('');
 
-        render(cats[0]);
+        // 2. 新增 RECORD Tab 到最右邊
+        tabsHtml += `<button class="tab-btn record-tab" onclick="changeToHistory(this)">RECORD</button>`;
+        
+        tabsContainer.innerHTML = tabsHtml;
+
+        // 預設顯示第一個分類
+        if (cats.length > 0) renderMenu(cats[0]);
+        
+        // 獲取歷史紀錄
+        fetchOrders();
+    }
+
+    // 切換到菜單分類
+    function changeTab(btn, cat) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // 切換視圖
+        document.getElementById('menu-view').classList.add('active');
+        document.getElementById('history-view').classList.remove('active');
+        document.getElementById('cart-bar').style.display = 'flex'; // 顯示購物車
+        
+        renderMenu(cat);
+    }
+
+    // 切換到歷史紀錄
+    function changeToHistory(btn) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // 切換視圖
+        document.getElementById('menu-view').classList.remove('active');
+        document.getElementById('history-view').classList.add('active');
+        document.getElementById('cart-bar').style.display = 'none'; // 紀錄頁隱藏購物車
+        
+        fetchOrders(); // 刷新紀錄
     }
 
     async function fetchOrders() {
@@ -214,11 +288,11 @@
                 </div>
             `).join('');
         } else {
-            historyList.innerHTML = '<p style="font-size: 0.8rem; color: #ccc; text-align: center;">暫無紀錄</p>';
+            historyList.innerHTML = '<p style="font-size: 0.8rem; color: #ccc; text-align: center; padding: 20px;">NO RECORDS YET</p>';
         }
     }
 
-    function render(cat) {
+    function renderMenu(cat) {
         const container = document.getElementById('menu-container');
         container.innerHTML = '';
         const items = fullMenu.filter(i => i.category === cat);
@@ -247,12 +321,6 @@
         });
     }
 
-    function changeTab(btn, cat) {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        render(cat);
-    }
-
     function addToCart(name, price) {
         cart.push({name, price});
         updateCartUI();
@@ -276,13 +344,18 @@
         }]);
         
         if (!error) {
-            alert("下單成功，請享用美刻時光");
+            alert("Merci. 下單成功，請享用美刻時光。");
             cart = [];
             updateCartUI();
-            fetchOrders();
         } else {
             alert("系統繁忙，請稍後再試");
         }
+    }
+
+    // 2. 客人結帳功能
+    function guestCheckout() {
+        // 優雅的提示文案
+        alert("本日由主理人款待。\n願您享受這份 L'Art de Vivre 的美學時光。\n\n(It's on the house today. Enjoy!)");
     }
 
     function askForAdmin() {
@@ -291,23 +364,24 @@
             isAdmin = true;
             document.body.classList.add('admin-mode');
             document.getElementById('mode-status').innerText = "ADMIN MODE - 奢華管理中";
-            init();
+            init(); // 重新渲染以顯示隱藏按鈕
         }
     }
 
     async function toggleStock(id, status) {
         await _supabase.from('overcooked_menu').update({ is_available: !status }).eq('id', id);
-        init();
+        init(); // 保持在當前 Tab，但重新抓取數據
+        // 簡單優化：如果想留在當前分類，可以把 currentCategory 存起來，這裡簡化處理重跑 init
     }
 
-    // 終極修正版：清空紀錄功能
+    // 1. 修正清空紀錄功能 (解決 UUID 錯誤)
     async function clearAllOrders() {
         if (confirm("老闆，確定要清空所有紀錄迎接下一組朋友？")) {
-            // 使用 neq('id', 0) 是為了繞過 Supabase 對於無條件刪除的限制
+            // 使用 gt('created_at', '2000-01-01') 來匹配所有行，避免用 int 0 去匹配 UUID
             const { error } = await _supabase
                 .from('overcooked_orders')
                 .delete()
-                .neq('id', 0); 
+                .gt('created_at', '2000-01-01T00:00:00Z'); 
             
             if (error) {
                 console.error("Delete failed:", error);
