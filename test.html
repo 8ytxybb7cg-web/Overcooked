@@ -49,7 +49,7 @@
             letter-spacing: 2px; 
         }
 
-        /* --- Tabs Navigation --- */
+        /* --- Tabs Navigation with Arrows --- */
         .tabs-wrapper {
             position: sticky;
             top: 0;
@@ -62,7 +62,7 @@
         }
 
         .scroll-hint {
-            width: 30px;
+            width: 35px;
             height: 50px;
             display: flex;
             align-items: center;
@@ -72,8 +72,9 @@
             font-weight: bold;
             font-size: 1.2rem;
             flex-shrink: 0;
+            cursor: pointer;
             user-select: none;
-            opacity: 0.6;
+            opacity: 0.7;
         }
 
         .tabs {
@@ -108,15 +109,12 @@
             position: relative; overflow: hidden;
             border: 1px solid rgba(197, 160, 89, 0.1);
         }
-        /* 圖片容器與物件位置設定 */
         .item-img { 
             width: 100%; 
             height: 240px; 
             object-fit: cover; 
             background-color: #f0f0f0; 
             display: block;
-            /* 預設置中，稍後會由 JS 動態調整 */
-            object-position: center; 
         }
         .item-info { padding: 18px; text-align: left; }
         .item-name { font-size: 1.1rem; font-weight: 500; margin: 0; letter-spacing: 1px; }
@@ -193,9 +191,9 @@
 </header>
 
 <div class="tabs-wrapper">
-    <div class="scroll-hint" onclick="document.getElementById('category-tabs').scrollBy({left: -100, behavior: 'smooth'})">‹</div>
+    <div class="scroll-hint" onclick="document.getElementById('category-tabs').scrollBy({left: -120, behavior: 'smooth'})">‹</div>
     <nav id="category-tabs" class="tabs"></nav>
-    <div class="scroll-hint" onclick="document.getElementById('category-tabs').scrollBy({left: 100, behavior: 'smooth'})">›</div>
+    <div class="scroll-hint" onclick="document.getElementById('category-tabs').scrollBy({left: 120, behavior: 'smooth'})">›</div>
 </div>
 
 <main id="menu-view" class="view-container active">
@@ -290,19 +288,26 @@
             const isAvail = String(item.is_available).toUpperCase() === 'TRUE';
             if (!isAdmin && !isAvail) return;
 
-            // 解析圖片位置: 檢查 description 是否包含 "pos: xxx"
-            let imgPos = "center"; // 預設值
-            let cleanDesc = item.description || "";
-            if (cleanDesc.includes("pos:")) {
-                const parts = cleanDesc.split("pos:");
-                imgPos = parts[1].trim();
-                cleanDesc = parts[0].trim(); // 顯示時把 pos 標記隱藏
+            // --- 圖片位置解析與描述優化 ---
+            let imgPos = "center"; // 預設垂直居中
+            let rawDesc = item.description || "";
+            let cleanDesc = rawDesc;
+
+            // 使用 Regex 尋找 "pos: 數值"
+            const posMatch = rawDesc.match(/pos:\s*([^,;]+)/i);
+            if (posMatch) {
+                imgPos = posMatch[1].trim(); 
+                // 從前台描述中刪除 pos 標記，避免客戶看到
+                cleanDesc = rawDesc.replace(/pos:\s*[^,;]+/i, "").trim();
             }
 
             const div = document.createElement('div');
             div.className = `menu-item ${!isAvail ? 'unavailable' : ''}`;
             div.innerHTML = `
-                <img src="${item.image_url}" class="item-img" style="object-position: ${imgPos}" onerror="this.src='https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400'">
+                <img src="${item.image_url}" 
+                     class="item-img" 
+                     style="object-position: center ${imgPos};" 
+                     onerror="this.src='https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400'">
                 <div class="item-info">
                     <p class="item-name">${item.name}</p>
                     <p class="item-desc">${cleanDesc}</p>
@@ -323,6 +328,7 @@
     async function toggleStock(id, status) {
         const { error } = await _supabase.from('overcooked_menu').update({ is_available: !status }).eq('id', id);
         if (!error) {
+            // 維持在當前頁面，不置頂
             await init(currentCategory, false); 
         }
     }
@@ -346,7 +352,7 @@
         }
     }
 
-    // --- 購物車與統計邏輯 ---
+    // --- 購物車與紀錄邏輯 ---
     function addToCart(name, price) {
         cart.push({name, price});
         updateCartUI();
