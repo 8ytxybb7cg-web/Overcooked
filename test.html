@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LV CAFE by Overcooked</title>
+    <title>OVERCOOKED CAFE</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --lv-bg: #FAF9F6;
-            --lv-gold: #C5A059; /* 香檳金 */
-            --lv-dark: #2D2926; /* LV 經典深色 */
-            --lv-accent: #8E795E;
+            --lv-gold: #C5A059;
+            --lv-dark: #2D2926;
             --lv-white: #FFFFFF;
             --lv-red: #9B301A;
+            --lv-grey: #f4f4f4;
         }
 
         body {
@@ -21,7 +21,7 @@
             color: var(--lv-dark);
             margin: 0;
             line-height: 1.6;
-            padding-bottom: 120px; /* 留位給購物車 */
+            padding-bottom: 120px;
         }
 
         header {
@@ -33,22 +33,23 @@
 
         h1 { 
             font-weight: 300; 
-            letter-spacing: 6px; 
+            letter-spacing: 4px; 
             margin: 0; 
-            font-size: 1.6rem; 
+            font-size: 1.5rem; 
             cursor: pointer; 
             user-select: none;
             color: var(--lv-dark);
+            text-transform: uppercase;
         }
         #mode-status { 
             font-size: 0.7rem; 
             color: var(--lv-gold); 
-            margin-top: 12px; 
+            margin-top: 10px; 
             text-transform: uppercase; 
             letter-spacing: 2px; 
         }
 
-        /* --- 分類 Tab 優化 --- */
+        /* Tabs */
         .tabs {
             display: flex;
             overflow-x: auto;
@@ -72,18 +73,14 @@
         }
         .tab-btn.active { color: var(--lv-gold); border-bottom: 2px solid var(--lv-gold); }
         
-        /* 紀錄 Tab 特別樣式 */
-        .tab-btn.record-tab {
-            margin-left: auto; /* 推到最右邊 */
-            color: var(--lv-dark);
-        }
+        .tab-btn.record-tab { margin-left: auto; color: var(--lv-dark); }
         .tab-btn.record-tab.active { border-bottom: 2px solid var(--lv-dark); }
 
-        /* --- 容器切換邏輯 --- */
+        /* Views */
         .view-container { display: none; padding: 20px; }
         .view-container.active { display: block; }
 
-        /* 餐點列表 */
+        /* Menu Items */
         .menu-item {
             background: var(--lv-white); margin-bottom: 30px;
             border-radius: 2px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);
@@ -106,7 +103,7 @@
         }
         .add-btn:active { transform: scale(0.9); background: var(--lv-gold); }
 
-        /* --- 3. 購物車 Bar 排版修復 --- */
+        /* Cart Bar - Updated */
         .cart-bar {
             position: fixed; bottom: 25px; left: 20px; right: 20px;
             background: var(--lv-dark); color: var(--lv-white);
@@ -115,16 +112,17 @@
             justify-content: space-between; 
             align-items: center;
             backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 1000;
-            flex-wrap: nowrap; /* 禁止換行 */
+            flex-wrap: nowrap;
         }
         
         .cart-info {
-            font-size: 0.8rem; 
+            font-size: 0.9rem; 
             letter-spacing: 1px;
-            white-space: nowrap; /* 強制不換行 */
+            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            margin-right: 10px;
+            margin-right: 15px;
+            font-weight: 500;
         }
 
         .order-btn {
@@ -132,66 +130,87 @@
             border: none; padding: 10px 20px; border-radius: 2px;
             font-size: 0.8rem; font-weight: 600; cursor: pointer;
             letter-spacing: 1px;
-            white-space: nowrap; /* 強制不換行 */
-            flex-shrink: 0; /* 防止按鈕被壓縮 */
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
-        /* Order 紀錄區 */
-        .history-card {
-            background: #FDFCFB; padding: 15px; border-radius: 2px;
-            margin-bottom: 12px; font-size: 0.85rem; 
-            border: 1px solid #F0EAE2;
-            border-left: 4px solid var(--lv-gold);
+        /* Record Summary Table */
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
-        .history-time { font-size: 0.7rem; color: #999; margin-bottom: 6px; text-transform: uppercase; }
+        .summary-table th {
+            text-align: left;
+            padding: 12px;
+            background: var(--lv-grey);
+            font-weight: 600;
+            color: var(--lv-dark);
+            border-bottom: 2px solid var(--lv-gold);
+        }
+        .summary-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+        .summary-table tr:last-child td { border-bottom: none; }
         
-        /* 紀錄頁面按鈕 */
-        .action-area { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
-        
-        /* 客人結帳按鈕 */
-        .guest-checkout-btn {
-            background: var(--lv-dark); color: #fff; border: none;
-            padding: 12px 30px; font-size: 0.9rem; letter-spacing: 2px;
-            cursor: pointer; width: 100%; border-radius: 2px;
+        .col-name { width: 45%; }
+        .col-qty { width: 15%; text-align: center; }
+        .col-total { width: 40%; text-align: right; }
+
+        .grand-total-row {
+            margin-top: 15px;
+            padding: 15px;
+            background: var(--lv-dark);
+            color: var(--lv-white);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.1rem;
+            border-radius: 2px;
         }
 
-        /* Admin 專用樣式 */
-        .admin-controls { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; }
+        /* Buttons */
+        .action-area { margin-top: 30px; text-align: center; }
+        .guest-checkout-btn, .clear-history-btn {
+            width: 100%; padding: 14px; border: none; border-radius: 2px;
+            font-size: 0.9rem; letter-spacing: 2px; cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .guest-checkout-btn { background: var(--lv-gold); color: #fff; }
+        .clear-history-btn { background: var(--lv-red); color: #fff; display: none; }
+        
+        /* Admin */
+        .admin-controls { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee; }
         .admin-mode .admin-controls { display: block; }
-        
-        .clear-history-btn { 
-            display: none; /* 預設隱藏 */
-            background: var(--lv-red); color: #fff; border: none; 
-            padding: 12px 30px; border-radius: 2px; font-size: 0.8rem; cursor: pointer;
-            letter-spacing: 1px; width: 100%;
-        }
-        .admin-mode .clear-history-btn { display: inline-block; } /* Admin 可見 */
-        .admin-mode .guest-checkout-btn { display: none; } /* Admin 隱藏假結帳 */
-
+        .admin-mode .clear-history-btn { display: inline-block; }
+        .admin-mode .guest-checkout-btn { display: none; }
         .unavailable { filter: grayscale(1); opacity: 0.4; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1 onclick="askForAdmin()">LV CAFE BY OVERCOOKED</h1>
-    <div id="mode-status">L'Art de Vivre - 活出藝術</div>
+    <h1 onclick="askForAdmin()">OVERCOOKED CAFE</h1>
+    <div id="mode-status">Casual Dining</div>
 </header>
 
-<nav id="category-tabs" class="tabs">
-    </nav>
+<nav id="category-tabs" class="tabs"></nav>
 
 <main id="menu-view" class="view-container active">
     <div id="menu-container"></div>
 </main>
 
 <section id="history-view" class="view-container">
-    <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 20px; color: var(--lv-dark); letter-spacing: 1px; text-align: center;">
-        TABLE RECORDS
+    <div style="font-size: 0.9rem; font-weight: 600; margin-bottom: 15px; text-align: center; letter-spacing: 1px;">
+        ORDER SUMMARY
     </div>
     
-    <div id="order-history-list">
-        <p style="font-size: 0.8rem; color: #ccc; text-align: center;">暫無紀錄</p>
+    <div id="summary-container">
+        <p style="text-align: center; color: #999;">暫無訂單</p>
     </div>
 
     <div class="action-area">
@@ -202,9 +221,10 @@
 
 <section class="cart-bar" id="cart-bar">
     <div class="cart-info">
-        SELECTED <span id="cart-count">0</span> / HK$ <span id="cart-total">0</span>
+        SELECTED <span id="cart-count">0</span>
+         &nbsp;&nbsp; $<span id="cart-total">0</span>
     </div>
-    <button class="order-btn" onclick="submitOrder()">PLACE ORDER 落單</button>
+    <button class="order-btn" onclick="submitOrder()">PLACE ORDER</button>
 </section>
 
 <script>
@@ -218,16 +238,15 @@
 
     async function init() {
         // 獲取菜單
-        const { data: menuData, error: menuError } = await _supabase
+        const { data: menuData, error } = await _supabase
             .from('overcooked_menu')
             .select('*')
             .order('"sort category"', { ascending: true })
             .order('"sort name"', { ascending: true });
 
-        if (menuError) console.error(menuError);
-        else fullMenu = menuData || [];
+        if (!error) fullMenu = menuData || [];
 
-        // 渲染 Tab
+        // 渲染 Tabs
         const cats = [...new Set(fullMenu.map(i => i.category))];
         const tabsContainer = document.getElementById('category-tabs');
         
@@ -235,61 +254,114 @@
             `<button class="tab-btn ${idx===0?'active':''}" onclick="changeTab(this, '${c}')">${c}</button>`
         ).join('');
 
-        // 2. 新增 RECORD Tab 到最右邊
         tabsHtml += `<button class="tab-btn record-tab" onclick="changeToHistory(this)">RECORD</button>`;
-        
         tabsContainer.innerHTML = tabsHtml;
 
-        // 預設顯示第一個分類
         if (cats.length > 0) renderMenu(cats[0]);
-        
-        // 獲取歷史紀錄
-        fetchOrders();
     }
 
-    // 切換到菜單分類
     function changeTab(btn, cat) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        
-        // 切換視圖
         document.getElementById('menu-view').classList.add('active');
         document.getElementById('history-view').classList.remove('active');
-        document.getElementById('cart-bar').style.display = 'flex'; // 顯示購物車
-        
+        document.getElementById('cart-bar').style.display = 'flex';
         renderMenu(cat);
     }
 
-    // 切換到歷史紀錄
     function changeToHistory(btn) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-
-        // 切換視圖
         document.getElementById('menu-view').classList.remove('active');
         document.getElementById('history-view').classList.add('active');
-        document.getElementById('cart-bar').style.display = 'none'; // 紀錄頁隱藏購物車
+        document.getElementById('cart-bar').style.display = 'none';
         
-        fetchOrders(); // 刷新紀錄
+        generateSummary(); // 生成總結算表
     }
 
-    async function fetchOrders() {
+    // --- 新增：聚合訂單邏輯 ---
+    async function generateSummary() {
         const { data: orders, error } = await _supabase
             .from('overcooked_orders')
-            .select('*')
-            .order('created_at', { ascending: false });
+            .select('items'); // 我們只需要 items 欄位來解析
 
-        const historyList = document.getElementById('order-history-list');
-        if (orders && orders.length > 0) {
-            historyList.innerHTML = orders.map(o => `
-                <div class="history-card">
-                    <div class="history-time">${new Date(o.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                    <div style="font-weight:500;">${o.items}</div>
-                </div>
-            `).join('');
-        } else {
-            historyList.innerHTML = '<p style="font-size: 0.8rem; color: #ccc; text-align: center; padding: 20px;">NO RECORDS YET</p>';
+        const container = document.getElementById('summary-container');
+
+        if (!orders || orders.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">NO ORDERS YET</p>';
+            return;
         }
+
+        // 1. 統計所有品項數量
+        let aggregatedData = {}; // 格式: { "ItemName": quantity, "ItemName2": quantity }
+
+        orders.forEach(order => {
+            // 解析字符串 "Item A x 1, Item B x 2"
+            const itemsArr = order.items.split(',');
+            itemsArr.forEach(itemStr => {
+                // 使用正則表達式提取名稱和數量 (假設格式為 "Name x Qty")
+                const match = itemStr.trim().match(/(.+) x (\d+)/);
+                if (match) {
+                    const name = match[1].trim();
+                    const qty = parseInt(match[2]);
+                    if (aggregatedData[name]) {
+                        aggregatedData[name] += qty;
+                    } else {
+                        aggregatedData[name] = qty;
+                    }
+                }
+            });
+        });
+
+        // 2. 計算金額並生成 HTML
+        let tableHtml = `
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th class="col-name">ITEM</th>
+                        <th class="col-qty">QTY</th>
+                        <th class="col-total">TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        let grandTotal = 0;
+
+        // 遍歷統計後的數據
+        for (const [name, qty] of Object.entries(aggregatedData)) {
+            // 從菜單中查找價格
+            const menuItem = fullMenu.find(m => m.name === name);
+            const unitPrice = menuItem ? menuItem.price : 0;
+            const subTotal = unitPrice * qty;
+            grandTotal += subTotal;
+
+            // 如果有數量才顯示
+            if (qty > 0) {
+                tableHtml += `
+                    <tr>
+                        <td>
+                            <div style="font-weight:600">${name}</div>
+                            <div style="font-size:0.75rem; color:#999">$${unitPrice} / each</div>
+                        </td>
+                        <td style="text-align:center; font-weight:bold">${qty}</td>
+                        <td style="text-align:right; font-weight:bold">$${subTotal}</td>
+                    </tr>
+                `;
+            }
+        }
+
+        tableHtml += `</tbody></table>`;
+
+        // 3. 加入 Grand Total
+        tableHtml += `
+            <div class="grand-total-row">
+                <span>TOTAL AMOUNT</span>
+                <span style="font-weight:700">$${grandTotal}</span>
+            </div>
+        `;
+
+        container.innerHTML = tableHtml;
     }
 
     function renderMenu(cat) {
@@ -304,7 +376,7 @@
             const div = document.createElement('div');
             div.className = `menu-item ${!isAvail ? 'unavailable' : ''}`;
             div.innerHTML = `
-                <img src="${item.image_url}" class="item-img" onerror="this.src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400'">
+                <img src="${item.image_url}" class="item-img" onerror="this.src='https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400'">
                 <div class="item-info">
                     <p class="item-name">${item.name}</p>
                     <p class="item-desc">${item.description || ''}</p>
@@ -332,19 +404,20 @@
     }
 
     async function submitOrder() {
-        if (cart.length === 0) return alert("請先選擇心儀餐點");
+        if (cart.length === 0) return alert("請先選擇餐點");
         
         const summary = cart.reduce((a, c) => { a[c.name] = (a[c.name] || 0) + 1; return a; }, {});
         const itemsStr = Object.entries(summary).map(([n, q]) => `${n} x ${q}`).join(", ");
+        const total = cart.reduce((s, i) => s + i.price, 0);
         
         const { error } = await _supabase.from('overcooked_orders').insert([{ 
             items: itemsStr, 
-            total_price: parseInt(document.getElementById('cart-total').innerText),
-            table_no: 'LV-VIP' 
+            total_price: total,
+            table_no: 'Table-1' 
         }]);
         
         if (!error) {
-            alert("Merci. 下單成功，請享用美刻時光。");
+            alert("下單成功！");
             cart = [];
             updateCartUI();
         } else {
@@ -352,43 +425,37 @@
         }
     }
 
-    // 2. 客人結帳功能
     function guestCheckout() {
-        // 優雅的提示文案
-        alert("本日由主理人款待。\n願您享受這份 L'Art de Vivre 的美學時光。\n\n(It's on the house today. Enjoy!)");
+        alert("本日老闆請客！\n(It's on the house today. Enjoy!)");
     }
 
     function askForAdmin() {
-        const pw = prompt("老闆，請輸入暗號：");
+        const pw = prompt("Admin Password:");
         if (pw === "1234") {
             isAdmin = true;
             document.body.classList.add('admin-mode');
-            document.getElementById('mode-status').innerText = "ADMIN MODE - 奢華管理中";
-            init(); // 重新渲染以顯示隱藏按鈕
+            document.getElementById('mode-status').innerText = "ADMIN MODE";
+            init();
         }
     }
 
     async function toggleStock(id, status) {
         await _supabase.from('overcooked_menu').update({ is_available: !status }).eq('id', id);
-        init(); // 保持在當前 Tab，但重新抓取數據
-        // 簡單優化：如果想留在當前分類，可以把 currentCategory 存起來，這裡簡化處理重跑 init
+        init();
     }
 
-    // 1. 修正清空紀錄功能 (解決 UUID 錯誤)
     async function clearAllOrders() {
-        if (confirm("老闆，確定要清空所有紀錄迎接下一組朋友？")) {
-            // 使用 gt('created_at', '2000-01-01') 來匹配所有行，避免用 int 0 去匹配 UUID
+        if (confirm("Confirm to clear all records?")) {
             const { error } = await _supabase
                 .from('overcooked_orders')
                 .delete()
                 .gt('created_at', '2000-01-01T00:00:00Z'); 
             
             if (error) {
-                console.error("Delete failed:", error);
-                alert("清空失敗：" + (error.message || "權限不足"));
+                alert("Error: " + error.message);
             } else {
-                alert("紀錄已成功清空");
-                fetchOrders();
+                alert("Records cleared.");
+                generateSummary();
             }
         }
     }
