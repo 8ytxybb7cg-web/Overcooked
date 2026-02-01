@@ -3,21 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="robots" content="noindex, nofollow">
     <title>Overcooked Cafe</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Muji Style Colors */
         :root {
-            --muji-bg: #F5F3F0;       /* 暖米色 */
-            --muji-wood: #E0D7C6;     /* 木質色 */
-            --muji-text: #4A4A4A;     /* 深灰色 */
-            --muji-accent: #8C7E6A;   /* 亞麻色 */
+            --muji-bg: #F5F3F0;
+            --muji-wood: #E0D7C6;
+            --muji-text: #4A4A4A;
+            --muji-accent: #8C7E6A;
             --muji-white: #FFFFFF;
         }
 
         body {
-            font-family: "Helvetica Neue", "Helvetica", "PingFang HK", "Microsoft JhengHei", sans-serif;
+            font-family: "Helvetica Neue", Helvetica, "PingFang HK", "Microsoft JhengHei", sans-serif;
             background-color: var(--muji-bg);
             color: var(--muji-text);
             margin: 0;
@@ -32,21 +30,8 @@
             border-bottom: 1px solid var(--muji-wood);
         }
 
-        h1 {
-            font-weight: 300;
-            letter-spacing: 4px;
-            margin: 0;
-            font-size: 1.8rem;
-            cursor: pointer;
-        }
-
-        #mode-status {
-            font-size: 0.75rem;
-            letter-spacing: 1px;
-            color: var(--muji-accent);
-            margin-top: 10px;
-            text-transform: uppercase;
-        }
+        h1 { font-weight: 300; letter-spacing: 4px; margin: 0; font-size: 1.8rem; cursor: pointer; }
+        #mode-status { font-size: 0.75rem; color: var(--muji-accent); margin-top: 10px; text-transform: uppercase; }
 
         .tabs {
             display: flex;
@@ -73,10 +58,7 @@
             transition: 0.3s;
             border-bottom: 2px solid transparent;
         }
-        .tab-btn.active {
-            color: var(--muji-text);
-            border-bottom: 2px solid var(--muji-accent);
-        }
+        .tab-btn.active { color: var(--muji-text); border-bottom: 2px solid var(--muji-accent); }
 
         .menu-list { padding: 20px; }
         .menu-item {
@@ -88,93 +70,37 @@
             position: relative;
         }
 
-        .item-img {
-            width: 100%;
-            height: 220px;
-            object-fit: cover;
-            background-color: var(--muji-bg);
-            filter: sepia(5%) contrast(95%);
-        }
-
+        .item-img { width: 100%; height: 220px; object-fit: cover; background-color: var(--muji-bg); filter: sepia(5%) contrast(95%); }
         .item-info { padding: 15px; text-align: left; }
         .item-name { font-size: 1.1rem; font-weight: 400; margin: 0; }
         .item-desc { font-size: 0.8rem; color: #888; margin: 8px 0 12px; min-height: 2.4em; }
         .item-price { font-size: 1rem; color: var(--muji-text); font-weight: 500; }
 
         .add-btn {
-            position: absolute;
-            right: 15px;
-            bottom: 15px;
-            background: none;
-            border: 1px solid var(--muji-wood);
-            color: var(--muji-accent);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            font-size: 1.4rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-        .add-btn:active { background: var(--muji-wood); color: white; }
-
-        .admin-controls {
-            display: none;
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px dashed var(--muji-wood);
-        }
-        .admin-mode .admin-controls { display: block; }
-        
-        .stock-btn {
-            background: none;
-            border: 1px solid var(--muji-text);
-            padding: 5px 10px;
-            font-size: 0.75rem;
-            cursor: pointer;
+            position: absolute; right: 15px; bottom: 15px;
+            background: none; border: 1px solid var(--muji-wood);
+            color: var(--muji-accent); width: 36px; height: 36px;
+            border-radius: 50%; font-size: 1.4rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
         }
 
         .cart-bar {
-            position: fixed;
-            bottom: 30px;
-            left: 20px;
-            right: 20px;
-            background: rgba(74, 74, 74, 0.95);
-            color: var(--muji-white);
-            padding: 12px 25px;
-            border-radius: 50px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            backdrop-filter: blur(8px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-            z-index: 1000;
+            position: fixed; bottom: 30px; left: 20px; right: 20px;
+            background: rgba(74, 74, 74, 0.95); color: var(--muji-white);
+            padding: 12px 25px; border-radius: 50px;
+            display: flex; justify-content: space-between; align-items: center;
+            backdrop-filter: blur(8px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); z-index: 1000;
         }
 
         .order-btn {
-            background: var(--muji-white);
-            color: var(--muji-text);
-            border: none;
-            padding: 10px 22px;
-            border-radius: 25px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            letter-spacing: 1px;
-            cursor: pointer;
+            background: var(--muji-white); color: var(--muji-text);
+            border: none; padding: 10px 22px; border-radius: 25px;
+            font-size: 0.85rem; font-weight: 600; cursor: pointer;
         }
 
         .unavailable { filter: grayscale(1); opacity: 0.4; }
-        .sold-out-label {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(255,255,255,0.8);
-            padding: 2px 8px;
-            font-size: 0.7rem;
-            letter-spacing: 1px;
-        }
+        .admin-controls { display: none; margin-top: 10px; border-top: 1px dashed #ddd; padding-top: 10px; }
+        .admin-mode .admin-controls { display: block; }
     </style>
 </head>
 <body class="guest-mode">
@@ -191,9 +117,7 @@
 </main>
 
 <section class="cart-bar">
-    <div style="font-size: 0.85rem; letter-spacing: 0.5px;">
-        已選 <span id="cart-count">0</span> / HK$ <span id="cart-total">0</span>
-    </div>
+    <div style="font-size: 0.85rem;">已選 <span id="cart-count">0</span> / HK$ <span id="cart-total">0</span></div>
     <button class="order-btn" onclick="submitOrder()">落單 ORDER</button>
 </section>
 
@@ -206,23 +130,23 @@
     let isAdmin = false;
     let fullMenu = [];
 
-    // 初始化：按 sort_category 和 sort_name 排序
     async function init() {
+        // 配合 CSV 標題有空格，SQL 排序要加引號
         const { data, error } = await _supabase
             .from('overcooked_menu')
             .select('*')
-            .order('sort_category', { ascending: true })
-            .order('sort_name', { ascending: true });
+            .order('"sort category"', { ascending: true })
+            .order('"sort name"', { ascending: true });
 
         if (error) {
             console.error(error);
-            document.getElementById('menu-container').innerHTML = "暫時無法連線到廚房。";
+            document.getElementById('menu-container').innerHTML = "連線失敗，請檢查資料庫欄位。";
             return;
         }
         
         fullMenu = data;
         
-        // 自動提取已排序的分類 (利用 Map 保持第一次出現的順序)
+        // 提取分類
         const orderedCats = [];
         data.forEach(item => {
             if (!orderedCats.includes(item.category)) {
@@ -244,24 +168,25 @@
         const items = fullMenu.filter(i => i.category === cat);
         
         items.forEach(item => {
-            if (!isAdmin && !item.is_available) return;
+            // 注意：CSV 標題有空格，JS 存取要用 item['column name']
+            const isAvail = String(item.is_available).toUpperCase() === 'TRUE';
+            if (!isAdmin && !isAvail) return;
             
             const div = document.createElement('div');
-            div.className = `menu-item ${!item.is_available ? 'unavailable' : ''}`;
+            div.className = `menu-item ${!isAvail ? 'unavailable' : ''}`;
             div.innerHTML = `
                 <img src="${item.image_url}" class="item-img" onerror="this.src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400'">
-                ${!item.is_available ? '<div class="sold-out-label">SOLD OUT</div>' : ''}
                 <div class="item-info">
                     <p class="item-name">${item.name}</p>
                     <p class="item-desc">${item.description || ''}</p>
                     <span class="item-price">$${item.price}</span>
                     <div class="admin-controls">
-                        <button class="stock-btn" onclick="toggleStock('${item.id}', ${item.is_available})">
-                            ${item.is_available ? '設為售罄' : '設為供應'}
+                        <button onclick="toggleStock('${item.id}', ${isAvail})">
+                            ${isAvail ? '設為售罄' : '設為供應'}
                         </button>
                     </div>
                 </div>
-                ${item.is_available ? `<button class="add-btn" onclick="addToCart('${item.name}', ${item.price})">+</button>` : ''}
+                ${isAvail ? `<button class="add-btn" onclick="addToCart('${item.name}', ${item.price})">+</button>` : ''}
             `;
             container.appendChild(div);
         });
@@ -275,62 +200,42 @@
 
     function addToCart(name, price) {
         cart.push({name, price});
-        updateUI();
-    }
-
-    function updateUI() {
         document.getElementById('cart-count').innerText = cart.length;
         document.getElementById('cart-total').innerText = cart.reduce((s, i) => s + i.price, 0);
     }
 
     async function submitOrder() {
         if (cart.length === 0) return alert("揀啲嘢食先啦！");
-        const table = prompt("老闆想知你坐邊？(例如：梳化/餐桌)") || "未知";
-        
+        const table = prompt("老闆想知你坐邊？") || "未知";
         const summary = cart.reduce((a, c) => { a[c.name] = (a[c.name] || 0) + 1; return a; }, {});
         const itemsStr = Object.entries(summary).map(([n, q]) => `${n} x ${q}`).join(", ");
-        const total = cart.reduce((s, i) => s + i.price, 0);
         
         const { error } = await _supabase.from('overcooked_orders').insert([{ 
             items: itemsStr, 
-            total_price: total,
+            total_price: parseInt(document.getElementById('cart-total').innerText),
             table_no: table
         }]);
         
-        if (!error) { 
-            alert("落單成功！請稍候。"); 
-            cart = []; 
-            updateUI();
-        } else {
-            alert("落單失敗，請告知老闆。");
-        }
+        if (!error) { alert("落單成功！"); cart = []; updateCartUI(); }
+    }
+
+    function updateCartUI() {
+        document.getElementById('cart-count').innerText = "0";
+        document.getElementById('cart-total').innerText = "0";
     }
 
     function askForAdmin() {
-        if (prompt("請輸入老闆暗號：") === "1234") {
+        if (prompt("輸入老闆暗號：") === "1234") {
             isAdmin = true;
             document.body.classList.add('admin-mode');
-            document.getElementById('mode-status').innerText = "ADMIN MODE / 管理中";
-            init(); 
-            setupRealtime();
-        } else { 
-            alert("密碼錯誤。"); 
+            document.getElementById('mode-status').innerText = "ADMIN MODE";
+            init();
         }
     }
 
-    async function toggleStock(id, currentStatus) {
-        const { error } = await _supabase.from('overcooked_menu')
-            .update({ is_available: !currentStatus })
-            .eq('id', id);
-        if (!error) init();
-    }
-
-    function setupRealtime() {
-        _supabase.channel('overcooked_orders')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'overcooked_orders' }, payload => {
-            new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play();
-            alert(`🛎️ 新訂單！\n${payload.new.items}\n位置：${payload.new.table_no}`);
-        }).subscribe();
+    async function toggleStock(id, status) {
+        await _supabase.from('overcooked_menu').update({ is_available: !status }).eq('id', id);
+        init();
     }
 
     init();
