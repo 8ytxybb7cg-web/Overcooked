@@ -58,10 +58,11 @@
             display: flex;
             align-items: center;
             border-bottom: 1px solid #eee;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
-        .scroll-indicator {
-            width: 30px;
+        .scroll-hint {
+            width: 35px;
             height: 50px;
             display: flex;
             align-items: center;
@@ -69,8 +70,11 @@
             background: var(--lv-white);
             color: var(--lv-gold);
             font-weight: bold;
-            opacity: 0.5;
+            font-size: 1.2rem;
             flex-shrink: 0;
+            cursor: pointer;
+            user-select: none;
+            opacity: 0.7;
         }
 
         .tabs {
@@ -105,7 +109,13 @@
             position: relative; overflow: hidden;
             border: 1px solid rgba(197, 160, 89, 0.1);
         }
-        .item-img { width: 100%; height: 240px; object-fit: cover; background-color: #f0f0f0; }
+        .item-img { 
+            width: 100%; 
+            height: 240px; 
+            object-fit: cover; 
+            background-color: #f0f0f0; 
+            display: block;
+        }
         .item-info { padding: 18px; text-align: left; }
         .item-name { font-size: 1.1rem; font-weight: 500; margin: 0; letter-spacing: 1px; }
         .item-desc { font-size: 0.8rem; color: #777; margin: 10px 0 15px; min-height: 2.4em; }
@@ -176,14 +186,14 @@
 <body>
 
 <header>
-    <h1 onclick="handleAdminToggle()">OVERCOOKED CAFE</h1>
+    <h1 id="brand-title" onclick="handleAdminToggle()">OVERCOOKED CAFE</h1>
     <div id="mode-status">Casual Dining</div>
 </header>
 
 <div class="tabs-wrapper">
-    <div class="scroll-indicator">‹</div>
+    <div class="scroll-hint" onclick="document.getElementById('category-tabs').scrollBy({left: -120, behavior: 'smooth'})">‹</div>
     <nav id="category-tabs" class="tabs"></nav>
-    <div class="scroll-indicator">›</div>
+    <div class="scroll-hint" onclick="document.getElementById('category-tabs').scrollBy({left: 120, behavior: 'smooth'})">›</div>
 </div>
 
 <main id="menu-view" class="view-container active">
@@ -212,9 +222,9 @@
     let cart = [];
     let isAdmin = false;
     let fullMenu = [];
-    let currentCategory = ""; // 紀錄目前所在的分類
+    let currentCategory = ""; 
 
-    async function init(targetCategory = null) {
+    async function init(targetCategory = null, shouldScrollTop = false) {
         const { data: menuData, error } = await _supabase
             .from('overcooked_menu')
             .select('*')
@@ -226,21 +236,24 @@
         const cats = [...new Set(fullMenu.map(i => i.category))];
         const tabsContainer = document.getElementById('category-tabs');
         
-        // 如果沒有指定分類，則設為第一個
         if (!targetCategory && cats.length > 0) targetCategory = cats[0];
         currentCategory = targetCategory;
 
-        // 渲染 Tabs
         let tabsHtml = cats.map(c => 
             `<button class="tab-btn ${c === currentCategory ? 'active' : ''}" onclick="changeTab(this, '${c}')">${c}</button>`
         ).join('');
 
-        tabsHtml += `<button class="tab-btn record-tab" onclick="changeToHistory(this)">RECORD</button>`;
+        tabsHtml += `<button class="tab-btn record-tab ${currentCategory === 'RECORD' ? 'active' : ''}" onclick="changeToHistory(this)">RECORD</button>`;
         tabsContainer.innerHTML = tabsHtml;
 
-        // 渲染選單（如果是 RECORD 頁面則不執行 renderMenu）
-        if (currentCategory !== "RECORD") {
+        if (currentCategory === "RECORD") {
+            generateSummary();
+        } else {
             renderMenu(currentCategory);
+        }
+
+        if (shouldScrollTop) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }
 
@@ -252,6 +265,7 @@
         document.getElementById('history-view').classList.remove('active');
         document.getElementById('cart-bar').style.display = 'flex';
         renderMenu(cat);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function changeToHistory(btn) {
@@ -262,6 +276,7 @@
         document.getElementById('history-view').classList.add('active');
         document.getElementById('cart-bar').style.display = 'none';
         generateSummary();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function renderMenu(cat) {
@@ -273,13 +288,29 @@
             const isAvail = String(item.is_available).toUpperCase() === 'TRUE';
             if (!isAdmin && !isAvail) return;
 
+            // --- 圖片位置解析與描述優化 ---
+            let imgPos = "center"; // 預設垂直居中
+            let rawDesc = item.description || "";
+            let cleanDesc = rawDesc;
+
+            // 使用 Regex 尋找 "pos: 數值"
+            const posMatch = rawDesc.match(/pos:\s*([^,;]+)/i);
+            if (posMatch) {
+                imgPos = posMatch[1].trim(); 
+                // 從前台描述中刪除 pos 標記，避免客戶看到
+                cleanDesc = rawDesc.replace(/pos:\s*[^,;]+/i, "").trim();
+            }
+
             const div = document.createElement('div');
             div.className = `menu-item ${!isAvail ? 'unavailable' : ''}`;
             div.innerHTML = `
-                <img src="${item.image_url}" class="item-img" onerror="this.src='https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400'">
+                <img src="${item.image_url}" 
+                     class="item-img" 
+                     style="object-position: center ${imgPos};" 
+                     onerror="this.src='https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400'">
                 <div class="item-info">
                     <p class="item-name">${item.name}</p>
-                    <p class="item-desc">${item.description || ''}</p>
+                    <p class="item-desc">${cleanDesc}</p>
                     <span class="item-price">$${item.price}</span>
                     <div class="admin-controls">
                         <button style="border:1px solid #ccc; background:#fff; padding:6px 12px; font-size:12px; border-radius:4px; cursor:pointer;" 
@@ -294,15 +325,14 @@
         });
     }
 
-    // 更新庫存狀態後，維持在當前分類
     async function toggleStock(id, status) {
         const { error } = await _supabase.from('overcooked_menu').update({ is_available: !status }).eq('id', id);
         if (!error) {
-            await init(currentCategory); // 傳入當前分類，避免跳轉
+            // 維持在當前頁面，不置頂
+            await init(currentCategory, false); 
         }
     }
 
-    // 管理員登入/登出處理
     function handleAdminToggle() {
         if (!isAdmin) {
             const pw = prompt("Admin Password:");
@@ -310,19 +340,19 @@
                 isAdmin = true;
                 document.body.classList.add('admin-mode');
                 document.getElementById('mode-status').innerText = "ADMIN MODE";
-                init(currentCategory);
+                init(currentCategory, false);
             }
         } else {
             if (confirm("目前為管理員模式，確定要登出嗎？")) {
                 isAdmin = false;
                 document.body.classList.remove('admin-mode');
                 document.getElementById('mode-status').innerText = "Casual Dining";
-                init(currentCategory);
+                init(currentCategory, false);
             }
         }
     }
 
-    // --- 其他功能保留 ---
+    // --- 購物車與紀錄邏輯 ---
     function addToCart(name, price) {
         cart.push({name, price});
         updateCartUI();
