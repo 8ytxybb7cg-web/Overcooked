@@ -1,1 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Overcooked Cafe</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --lv-bg: #FAF9F6;
+            --lv-gold: #C5A059; /* 香檳金 */
+            --lv-dark: #2D2926; /* LV 經典深色 */
+            --lv-accent: #8E795E;
+            --lv-white: #FFFFFF;
+            --lv-red: #9B301A;
+        }
 
+        body {
+            font-family: "Optima", "Hoefler Text", "PingFang HK", "Microsoft JhengHei", serif;
+            background-color: var(--lv-bg);
+            color: var(--lv-dark);
+            margin: 0;
+            line-height: 1.6;
+            padding-bottom: 150px;
+        }
+
+        header {
+            background: var(--lv-white);
+            padding: 50px 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--lv-gold);
+        }
+
+        /* 老闆 Login 位：點擊此標題 */
+        h1 { 
+            font-weight: 300; 
+            letter-spacing: 6px; 
+            margin: 0; 
+            font-size: 1.6rem; 
+            cursor: pointer; 
+            user-select: none;
+            color: var(--lv-dark);
+        }
+        #mode-status { 
+            font-size: 0.7rem; 
+            color: var(--lv-gold); 
+            margin-top: 12px; 
+            text-transform: uppercase; 
+            letter-spacing: 2px; 
+        }
+
+        /* 分類 Tab */
+        .tabs {
+            display: flex;
+            overflow-x: auto;
+            background: var(--lv-white);
+            padding: 12px 15px;
+            gap: 25px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid #eee;
+            scrollbar-width: none;
+        }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab-btn {
+            background: none; border: none; padding: 8px 0; color: #aaa;
+            font-size: 0.85rem; white-space: nowrap; cursor: pointer;
+            transition: 0.3s; border-bottom: 2px solid transparent;
+            font-weight: 500;
+        }
+        .tab-btn.active { color: var(--lv-gold); border-bottom: 2px solid var(--lv-gold); }
+
+        /* 餐點列表 */
+        .menu-list { padding: 20px; }
+        .menu-item {
+            background: var(--lv-white); margin-bottom: 30px;
+            border-radius: 2px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            position: relative; overflow: hidden;
+            border: 1px solid rgba(197, 160, 89, 0.1);
+        }
+        .item-img { width: 100%; height: 240px; object-fit: cover; background-color: #f0f0f0; }
+        .item-info { padding: 18px; text-align: left; }
+        .item-name { font-size: 1.1rem; font-weight: 500; margin: 0; letter-spacing: 1px; }
+        .item-desc { font-size: 0.8rem; color: #777; margin: 10px 0 15px; min-height: 2.4em; }
+        .item-price { font-size: 1rem; color: var(--lv-dark); font-weight: 600; }
+
+        .add-btn {
+            position: absolute; right: 18px; bottom: 18px;
+            background: var(--lv-dark); border: none;
+            color: var(--lv-white); width: 38px; height: 38px;
+            border-radius: 50%; font-size: 1.2rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: 0.2s;
+        }
+        .add-btn:active { transform: scale(0.9); background: var(--lv-gold); }
+
+        /* 購物車 Bar */
+        .cart-bar {
+            position: fixed; bottom: 25px; left: 20px; right: 20px;
+            background: var(--lv-dark); color: var(--lv-white);
+            padding: 14px 28px; border-radius: 4px;
+            display: flex; justify-content: space-between; align-items: center;
+            backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 1000;
+        }
+        .order-btn {
+            background: var(--lv-gold); color: var(--lv-white);
+            border: none; padding: 10px 25px; border-radius: 2px;
+            font-size: 0.8rem; font-weight: 600; cursor: pointer;
+            letter-spacing: 1px;
+        }
+
+        /* Order 紀錄區 */
+        .history-section {
+            padding: 25px 20px; margin-top: 30px;
+            background: var(--lv-white); border-top: 1px solid var(--lv-gold);
+        }
+        .history-title { 
+            font-size: 0.85rem; font-weight: 600; margin-bottom: 20px; 
+            color: var(--lv-gold); display: flex; justify-content: space-between; align-items: center;
+            letter-spacing: 1px;
+        }
+        .history-card {
+            background: #FDFCFB; padding: 15px; border-radius: 2px;
+            margin-bottom: 12px; font-size: 0.85rem; 
+            border: 1px solid #F0EAE2;
+            border-left: 4px solid var(--lv-gold);
+        }
+        .history-time { font-size: 0.7rem; color: #999; margin-bottom: 6px; text-transform: uppercase; }
+
+        /* Admin 專用樣式 */
+        .admin-controls { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; }
+        .admin-mode .admin-controls { display: block; }
+        .clear-history-btn { 
+            display: none; background: var(--lv-red); color: #fff; border: none; 
+            padding: 6px 14px; border-radius: 2px; font-size: 0.7rem; cursor: pointer;
+            letter-spacing: 1px;
+        }
+        .admin-mode .clear-history-btn { display: inline-block; }
+        .unavailable { filter: grayscale(1); opacity: 0.4; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1 onclick="askForAdmin()">LV CAFE BY OVERCOOKED</h1>
+    <div id="mode-status">L'Art de Vivre - 活出藝術</div>
+</header>
+
+<nav id="category-tabs" class="tabs"></nav>
+
+<main id="menu-container" class="menu-list"></main>
+
+<section class="history-section">
+    <div class="history-title">
+        <span>GUEST ORDERS 點餐紀錄</span>
+        <button class="clear-history-btn" onclick="clearAllOrders()">CLEAR ALL 清空紀錄</button>
+    </div>
+    <div id="order-history-list">
+        <p style="font-size: 0.8rem; color: #ccc; text-align: center;">暫無紀錄</p>
+    </div>
+</section>
+
+<section class="cart-bar">
+    <div style="font-size: 0.8rem; letter-spacing: 1px;">SELECTED <span id="cart-count">0</span> / HK$ <span id="cart-total">0</span></div>
+    <button class="order-btn" onclick="submitOrder()">PLACE ORDER 落單</button>
+</section>
+
+<script>
+    // 請確保這裡的 URL 和 KEY 是正確的
+    const SUPABASE_URL = 'https://myrhatzdypiwwgmmfbuw.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_bnnah-2fsCaQnKZDoKNJQw_NuYQVvKi';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let cart = [];
+    let isAdmin = false;
+    let fullMenu = [];
+
+    async function init() {
+        const { data: menuData, error: menuError } = await _supabase
+            .from('overcooked_menu')
+            .select('*')
+            .order('"sort category"', { ascending: true })
+            .order('"sort name"', { ascending: true });
+
+        if (menuError) {
+            console.error(menuError);
+            return;
+        }
+        fullMenu = menuData;
+
+        fetchOrders();
+
+        const cats = [...new Set(fullMenu.map(i => i.category))];
+        document.getElementById('category-tabs').innerHTML = cats.map((c, idx) => 
+            `<button class="tab-btn ${idx===0?'active':''}" onclick="changeTab(this, '${c}')">${c}</button>`
+        ).join('');
+
+        render(cats[0]);
+    }
+
+    async function fetchOrders() {
+        const { data: orders, error } = await _supabase
+            .from('overcooked_orders')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        const historyList = document.getElementById('order-history-list');
+        if (orders && orders.length > 0) {
+            historyList.innerHTML = orders.map(o => `
+                <div class="history-card">
+                    <div class="history-time">${new Date(o.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                    <div style="font-weight:500;">${o.items}</div>
+                </div>
+            `).join('');
+        } else {
+            historyList.innerHTML = '<p style="font-size: 0.8rem; color: #ccc; text-align: center;">暫無紀錄</p>';
+        }
+    }
+
+    function render(cat) {
+        const container = document.getElementById('menu-container');
+        container.innerHTML = '';
+        const items = fullMenu.filter(i => i.category === cat);
+
+        items.forEach(item => {
+            const isAvail = String(item.is_available).toUpperCase() === 'TRUE';
+            if (!isAdmin && !isAvail) return;
+
+            const div = document.createElement('div');
+            div.className = `menu-item ${!isAvail ? 'unavailable' : ''}`;
+            div.innerHTML = `
+                <img src="${item.image_url}" class="item-img" onerror="this.src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400'">
+                <div class="item-info">
+                    <p class="item-name">${item.name}</p>
+                    <p class="item-desc">${item.description || ''}</p>
+                    <span class="item-price">$${item.price}</span>
+                    <div class="admin-controls">
+                        <button style="border:1px solid #ccc; background:#fff; padding:4px 8px; font-size:12px;" onclick="toggleStock(${item.id}, ${isAvail})">
+                            ${isAvail ? '設為售罄' : '設為供應'}
+                        </button>
+                    </div>
+                </div>
+                ${isAvail ? `<button class="add-btn" onclick="addToCart('${item.name}', ${item.price})">+</button>` : ''}
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function changeTab(btn, cat) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        render(cat);
+    }
+
+    function addToCart(name, price) {
+        cart.push({name, price});
+        updateCartUI();
+    }
+
+    function updateCartUI() {
+        document.getElementById('cart-count').innerText = cart.length;
+        document.getElementById('cart-total').innerText = cart.reduce((s, i) => s + i.price, 0);
+    }
+
+    async function submitOrder() {
+        if (cart.length === 0) return alert("請先選擇心儀餐點");
+        
+        const summary = cart.reduce((a, c) => { a[c.name] = (a[c.name] || 0) + 1; return a; }, {});
+        const itemsStr = Object.entries(summary).map(([n, q]) => `${n} x ${q}`).join(", ");
+        
+        const { error } = await _supabase.from('overcooked_orders').insert([{ 
+            items: itemsStr, 
+            total_price: parseInt(document.getElementById('cart-total').innerText),
+            table_no: 'LV-VIP' 
+        }]);
+        
+        if (!error) {
+            alert("下單成功，請享用美刻時光");
+            cart = [];
+            updateCartUI();
+            fetchOrders();
+        } else {
+            alert("系統繁忙，請稍後再試");
+        }
+    }
+
+    function askForAdmin() {
+        const pw = prompt("老闆，請輸入暗號：");
+        if (pw === "1234") {
+            isAdmin = true;
+            document.body.classList.add('admin-mode');
+            document.getElementById('mode-status').innerText = "ADMIN MODE - 奢華管理中";
+            init();
+        }
+    }
+
+    async function toggleStock(id, status) {
+        await _supabase.from('overcooked_menu').update({ is_available: !status }).eq('id', id);
+        init();
+    }
+
+    // 終極修正版：清空紀錄功能
+    async function clearAllOrders() {
+        if (confirm("老闆，確定要清空所有紀錄迎接下一組朋友？")) {
+            // 使用 neq('id', 0) 是為了繞過 Supabase 對於無條件刪除的限制
+            const { error } = await _supabase
+                .from('overcooked_orders')
+                .delete()
+                .neq('id', 0); 
+            
+            if (error) {
+                console.error("Delete failed:", error);
+                alert("清空失敗：" + (error.message || "權限不足"));
+            } else {
+                alert("紀錄已成功清空");
+                fetchOrders();
+            }
+        }
+    }
+
+    init();
+</script>
+
+</body>
+</html>
