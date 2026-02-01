@@ -49,19 +49,38 @@
             letter-spacing: 2px; 
         }
 
-        /* Tabs */
-        .tabs {
-            display: flex;
-            overflow-x: auto;
-            background: var(--lv-white);
-            padding: 0 15px;
-            gap: 20px;
+        /* --- Tabs Navigation with Arrows --- */
+        .tabs-wrapper {
             position: sticky;
             top: 0;
             z-index: 100;
-            border-bottom: 1px solid #eee;
-            scrollbar-width: none;
+            background: var(--lv-white);
+            display: flex;
             align-items: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        .scroll-indicator {
+            width: 30px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--lv-white);
+            color: var(--lv-gold);
+            font-weight: bold;
+            opacity: 0.5;
+            flex-shrink: 0;
+        }
+
+        .tabs {
+            display: flex;
+            overflow-x: auto;
+            padding: 0 5px;
+            gap: 20px;
+            scrollbar-width: none;
+            flex-grow: 1;
+            scroll-behavior: smooth;
         }
         .tabs::-webkit-scrollbar { display: none; }
         
@@ -72,7 +91,6 @@
             font-weight: 500; letter-spacing: 1px;
         }
         .tab-btn.active { color: var(--lv-gold); border-bottom: 2px solid var(--lv-gold); }
-        
         .tab-btn.record-tab { margin-left: auto; color: var(--lv-dark); }
         .tab-btn.record-tab.active { border-bottom: 2px solid var(--lv-dark); }
 
@@ -103,7 +121,7 @@
         }
         .add-btn:active { transform: scale(0.9); background: var(--lv-gold); }
 
-        /* Cart Bar - Updated */
+        /* Cart Bar */
         .cart-bar {
             position: fixed; bottom: 25px; left: 20px; right: 20px;
             background: var(--lv-dark); color: var(--lv-white);
@@ -112,107 +130,69 @@
             justify-content: space-between; 
             align-items: center;
             backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 1000;
-            flex-wrap: nowrap;
         }
         
-        .cart-info {
-            font-size: 0.9rem; 
-            letter-spacing: 1px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-right: 15px;
-            font-weight: 500;
-        }
-
+        .cart-info { font-size: 0.9rem; letter-spacing: 1px; font-weight: 500; }
         .order-btn {
             background: var(--lv-gold); color: var(--lv-white);
             border: none; padding: 10px 20px; border-radius: 2px;
             font-size: 0.8rem; font-weight: 600; cursor: pointer;
             letter-spacing: 1px;
-            white-space: nowrap;
-            flex-shrink: 0;
         }
 
-        /* Record Summary Table */
+        /* Summary Table */
         .summary-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85rem;
-            background: #fff;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            width: 100%; border-collapse: collapse; font-size: 0.85rem;
+            background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         .summary-table th {
-            text-align: left;
-            padding: 12px;
-            background: var(--lv-grey);
-            font-weight: 600;
-            color: var(--lv-dark);
-            border-bottom: 2px solid var(--lv-gold);
+            text-align: left; padding: 12px; background: var(--lv-grey);
+            font-weight: 600; border-bottom: 2px solid var(--lv-gold);
         }
-        .summary-table td {
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-            vertical-align: top;
-        }
-        .summary-table tr:last-child td { border-bottom: none; }
+        .summary-table td { padding: 12px; border-bottom: 1px solid #eee; }
         
-        .col-name { width: 45%; }
-        .col-qty { width: 15%; text-align: center; }
-        .col-total { width: 40%; text-align: right; }
-
         .grand-total-row {
-            margin-top: 15px;
-            padding: 15px;
-            background: var(--lv-dark);
-            color: var(--lv-white);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 1.1rem;
-            border-radius: 2px;
+            margin-top: 15px; padding: 15px; background: var(--lv-dark);
+            color: var(--lv-white); display: flex; justify-content: space-between;
+            align-items: center; font-size: 1.1rem; border-radius: 2px;
         }
 
-        /* Buttons */
-        .action-area { margin-top: 30px; text-align: center; }
-        .guest-checkout-btn, .clear-history-btn {
-            width: 100%; padding: 14px; border: none; border-radius: 2px;
-            font-size: 0.9rem; letter-spacing: 2px; cursor: pointer;
-            margin-bottom: 10px;
-        }
-        .guest-checkout-btn { background: var(--lv-gold); color: #fff; }
-        .clear-history-btn { background: var(--lv-red); color: #fff; display: none; }
-        
-        /* Admin */
+        /* Admin Controls */
         .admin-controls { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee; }
         .admin-mode .admin-controls { display: block; }
         .admin-mode .clear-history-btn { display: inline-block; }
         .admin-mode .guest-checkout-btn { display: none; }
+        
         .unavailable { filter: grayscale(1); opacity: 0.4; }
+        
+        .guest-checkout-btn, .clear-history-btn {
+            width: 100%; padding: 14px; border: none; border-radius: 2px;
+            font-size: 0.9rem; letter-spacing: 2px; cursor: pointer; margin-bottom: 10px;
+        }
+        .guest-checkout-btn { background: var(--lv-gold); color: #fff; }
+        .clear-history-btn { background: var(--lv-red); color: #fff; display: none; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1 onclick="askForAdmin()">OVERCOOKED CAFE</h1>
+    <h1 onclick="handleAdminToggle()">OVERCOOKED CAFE</h1>
     <div id="mode-status">Casual Dining</div>
 </header>
 
-<nav id="category-tabs" class="tabs"></nav>
+<div class="tabs-wrapper">
+    <div class="scroll-indicator">‹</div>
+    <nav id="category-tabs" class="tabs"></nav>
+    <div class="scroll-indicator">›</div>
+</div>
 
 <main id="menu-view" class="view-container active">
     <div id="menu-container"></div>
 </main>
 
 <section id="history-view" class="view-container">
-    <div style="font-size: 0.9rem; font-weight: 600; margin-bottom: 15px; text-align: center; letter-spacing: 1px;">
-        ORDER SUMMARY
-    </div>
-    
-    <div id="summary-container">
-        <p style="text-align: center; color: #999;">暫無訂單</p>
-    </div>
-
+    <div style="font-size: 0.9rem; font-weight: 600; margin-bottom: 15px; text-align: center; letter-spacing: 1px;">ORDER SUMMARY</div>
+    <div id="summary-container"></div>
     <div class="action-area">
         <button class="guest-checkout-btn" onclick="guestCheckout()">VIP CHECKOUT 結帳</button>
         <button class="clear-history-btn" onclick="clearAllOrders()">CLEAR ALL 清空紀錄</button>
@@ -220,10 +200,7 @@
 </section>
 
 <section class="cart-bar" id="cart-bar">
-    <div class="cart-info">
-        SELECTED <span id="cart-count">0</span>
-         &nbsp;&nbsp; $<span id="cart-total">0</span>
-    </div>
+    <div class="cart-info">SELECTED <span id="cart-count">0</span> &nbsp;&nbsp; $<span id="cart-total">0</span></div>
     <button class="order-btn" onclick="submitOrder()">PLACE ORDER</button>
 </section>
 
@@ -235,9 +212,9 @@
     let cart = [];
     let isAdmin = false;
     let fullMenu = [];
+    let currentCategory = ""; // 紀錄目前所在的分類
 
-    async function init() {
-        // 獲取菜單
+    async function init(targetCategory = null) {
         const { data: menuData, error } = await _supabase
             .from('overcooked_menu')
             .select('*')
@@ -246,21 +223,29 @@
 
         if (!error) fullMenu = menuData || [];
 
-        // 渲染 Tabs
         const cats = [...new Set(fullMenu.map(i => i.category))];
         const tabsContainer = document.getElementById('category-tabs');
         
-        let tabsHtml = cats.map((c, idx) => 
-            `<button class="tab-btn ${idx===0?'active':''}" onclick="changeTab(this, '${c}')">${c}</button>`
+        // 如果沒有指定分類，則設為第一個
+        if (!targetCategory && cats.length > 0) targetCategory = cats[0];
+        currentCategory = targetCategory;
+
+        // 渲染 Tabs
+        let tabsHtml = cats.map(c => 
+            `<button class="tab-btn ${c === currentCategory ? 'active' : ''}" onclick="changeTab(this, '${c}')">${c}</button>`
         ).join('');
 
         tabsHtml += `<button class="tab-btn record-tab" onclick="changeToHistory(this)">RECORD</button>`;
         tabsContainer.innerHTML = tabsHtml;
 
-        if (cats.length > 0) renderMenu(cats[0]);
+        // 渲染選單（如果是 RECORD 頁面則不執行 renderMenu）
+        if (currentCategory !== "RECORD") {
+            renderMenu(currentCategory);
+        }
     }
 
     function changeTab(btn, cat) {
+        currentCategory = cat;
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById('menu-view').classList.add('active');
@@ -270,98 +255,13 @@
     }
 
     function changeToHistory(btn) {
+        currentCategory = "RECORD";
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById('menu-view').classList.remove('active');
         document.getElementById('history-view').classList.add('active');
         document.getElementById('cart-bar').style.display = 'none';
-        
-        generateSummary(); // 生成總結算表
-    }
-
-    // --- 新增：聚合訂單邏輯 ---
-    async function generateSummary() {
-        const { data: orders, error } = await _supabase
-            .from('overcooked_orders')
-            .select('items'); // 我們只需要 items 欄位來解析
-
-        const container = document.getElementById('summary-container');
-
-        if (!orders || orders.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">NO ORDERS YET</p>';
-            return;
-        }
-
-        // 1. 統計所有品項數量
-        let aggregatedData = {}; // 格式: { "ItemName": quantity, "ItemName2": quantity }
-
-        orders.forEach(order => {
-            // 解析字符串 "Item A x 1, Item B x 2"
-            const itemsArr = order.items.split(',');
-            itemsArr.forEach(itemStr => {
-                // 使用正則表達式提取名稱和數量 (假設格式為 "Name x Qty")
-                const match = itemStr.trim().match(/(.+) x (\d+)/);
-                if (match) {
-                    const name = match[1].trim();
-                    const qty = parseInt(match[2]);
-                    if (aggregatedData[name]) {
-                        aggregatedData[name] += qty;
-                    } else {
-                        aggregatedData[name] = qty;
-                    }
-                }
-            });
-        });
-
-        // 2. 計算金額並生成 HTML
-        let tableHtml = `
-            <table class="summary-table">
-                <thead>
-                    <tr>
-                        <th class="col-name">ITEM</th>
-                        <th class="col-qty">QTY</th>
-                        <th class="col-total">TOTAL</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-        let grandTotal = 0;
-
-        // 遍歷統計後的數據
-        for (const [name, qty] of Object.entries(aggregatedData)) {
-            // 從菜單中查找價格
-            const menuItem = fullMenu.find(m => m.name === name);
-            const unitPrice = menuItem ? menuItem.price : 0;
-            const subTotal = unitPrice * qty;
-            grandTotal += subTotal;
-
-            // 如果有數量才顯示
-            if (qty > 0) {
-                tableHtml += `
-                    <tr>
-                        <td>
-                            <div style="font-weight:600">${name}</div>
-                            <div style="font-size:0.75rem; color:#999">$${unitPrice} / each</div>
-                        </td>
-                        <td style="text-align:center; font-weight:bold">${qty}</td>
-                        <td style="text-align:right; font-weight:bold">$${subTotal}</td>
-                    </tr>
-                `;
-            }
-        }
-
-        tableHtml += `</tbody></table>`;
-
-        // 3. 加入 Grand Total
-        tableHtml += `
-            <div class="grand-total-row">
-                <span>TOTAL AMOUNT</span>
-                <span style="font-weight:700">$${grandTotal}</span>
-            </div>
-        `;
-
-        container.innerHTML = tableHtml;
+        generateSummary();
     }
 
     function renderMenu(cat) {
@@ -382,7 +282,8 @@
                     <p class="item-desc">${item.description || ''}</p>
                     <span class="item-price">$${item.price}</span>
                     <div class="admin-controls">
-                        <button style="border:1px solid #ccc; background:#fff; padding:4px 8px; font-size:12px;" onclick="toggleStock(${item.id}, ${isAvail})">
+                        <button style="border:1px solid #ccc; background:#fff; padding:6px 12px; font-size:12px; border-radius:4px; cursor:pointer;" 
+                                onclick="toggleStock(${item.id}, ${isAvail})">
                             ${isAvail ? '設為售罄' : '設為供應'}
                         </button>
                     </div>
@@ -393,6 +294,35 @@
         });
     }
 
+    // 更新庫存狀態後，維持在當前分類
+    async function toggleStock(id, status) {
+        const { error } = await _supabase.from('overcooked_menu').update({ is_available: !status }).eq('id', id);
+        if (!error) {
+            await init(currentCategory); // 傳入當前分類，避免跳轉
+        }
+    }
+
+    // 管理員登入/登出處理
+    function handleAdminToggle() {
+        if (!isAdmin) {
+            const pw = prompt("Admin Password:");
+            if (pw === "1234") {
+                isAdmin = true;
+                document.body.classList.add('admin-mode');
+                document.getElementById('mode-status').innerText = "ADMIN MODE";
+                init(currentCategory);
+            }
+        } else {
+            if (confirm("目前為管理員模式，確定要登出嗎？")) {
+                isAdmin = false;
+                document.body.classList.remove('admin-mode');
+                document.getElementById('mode-status').innerText = "Casual Dining";
+                init(currentCategory);
+            }
+        }
+    }
+
+    // --- 其他功能保留 ---
     function addToCart(name, price) {
         cart.push({name, price});
         updateCartUI();
@@ -405,60 +335,51 @@
 
     async function submitOrder() {
         if (cart.length === 0) return alert("請先選擇餐點");
-        
         const summary = cart.reduce((a, c) => { a[c.name] = (a[c.name] || 0) + 1; return a; }, {});
         const itemsStr = Object.entries(summary).map(([n, q]) => `${n} x ${q}`).join(", ");
-        const total = cart.reduce((s, i) => s + i.price, 0);
-        
         const { error } = await _supabase.from('overcooked_orders').insert([{ 
-            items: itemsStr, 
-            total_price: total,
-            table_no: 'Table-1' 
+            items: itemsStr, total_price: cart.reduce((s, i) => s + i.price, 0), table_no: 'Table-1' 
         }]);
-        
-        if (!error) {
-            alert("下單成功！");
-            cart = [];
-            updateCartUI();
-        } else {
-            alert("系統繁忙，請稍後再試");
+        if (!error) { alert("下單成功！"); cart = []; updateCartUI(); }
+    }
+
+    async function generateSummary() {
+        const { data: orders } = await _supabase.from('overcooked_orders').select('items');
+        const container = document.getElementById('summary-container');
+        if (!orders || orders.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">NO ORDERS YET</p>';
+            return;
         }
-    }
-
-    function guestCheckout() {
-        alert("本日老闆請客！\n(It's on the house today. Enjoy!)");
-    }
-
-    function askForAdmin() {
-        const pw = prompt("Admin Password:");
-        if (pw === "1234") {
-            isAdmin = true;
-            document.body.classList.add('admin-mode');
-            document.getElementById('mode-status').innerText = "ADMIN MODE";
-            init();
+        let aggregatedData = {};
+        orders.forEach(order => {
+            order.items.split(',').forEach(itemStr => {
+                const match = itemStr.trim().match(/(.+) x (\d+)/);
+                if (match) {
+                    const name = match[1].trim(), qty = parseInt(match[2]);
+                    aggregatedData[name] = (aggregatedData[name] || 0) + qty;
+                }
+            });
+        });
+        let tableHtml = `<table class="summary-table"><thead><tr><th>ITEM</th><th style="text-align:center">QTY</th><th style="text-align:right">TOTAL</th></tr></thead><tbody>`;
+        let grandTotal = 0;
+        for (const [name, qty] of Object.entries(aggregatedData)) {
+            const item = fullMenu.find(m => m.name === name);
+            const price = item ? item.price : 0;
+            grandTotal += (price * qty);
+            tableHtml += `<tr><td><strong>${name}</strong><br><small>$${price}/ea</small></td><td style="text-align:center">${qty}</td><td style="text-align:right">$${price*qty}</td></tr>`;
         }
-    }
-
-    async function toggleStock(id, status) {
-        await _supabase.from('overcooked_menu').update({ is_available: !status }).eq('id', id);
-        init();
+        tableHtml += `</tbody></table><div class="grand-total-row"><span>TOTAL AMOUNT</span><span>$${grandTotal}</span></div>`;
+        container.innerHTML = tableHtml;
     }
 
     async function clearAllOrders() {
         if (confirm("Confirm to clear all records?")) {
-            const { error } = await _supabase
-                .from('overcooked_orders')
-                .delete()
-                .gt('created_at', '2000-01-01T00:00:00Z'); 
-            
-            if (error) {
-                alert("Error: " + error.message);
-            } else {
-                alert("Records cleared.");
-                generateSummary();
-            }
+            await _supabase.from('overcooked_orders').delete().gt('created_at', '2000-01-01T00:00:00Z');
+            generateSummary();
         }
     }
+
+    function guestCheckout() { alert("本日老闆請客！\n(It's on the house today. Enjoy!)"); }
 
     init();
 </script>
