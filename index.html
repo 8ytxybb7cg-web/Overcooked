@@ -48,7 +48,6 @@
             text-transform: uppercase;
         }
 
-        /* Tabs - Muji Minimalist */
         .tabs {
             display: flex;
             overflow-x: auto;
@@ -79,7 +78,6 @@
             border-bottom: 2px solid var(--muji-accent);
         }
 
-        /* Menu Items */
         .menu-list { padding: 20px; }
         .menu-item {
             background: var(--muji-white);
@@ -100,10 +98,9 @@
 
         .item-info { padding: 15px; text-align: left; }
         .item-name { font-size: 1.1rem; font-weight: 400; margin: 0; }
-        .item-desc { font-size: 0.8rem; color: #888; margin: 8px 0 12px; height: 2.4em; overflow: hidden; }
+        .item-desc { font-size: 0.8rem; color: #888; margin: 8px 0 12px; min-height: 2.4em; }
         .item-price { font-size: 1rem; color: var(--muji-text); font-weight: 500; }
 
-        /* Buttons */
         .add-btn {
             position: absolute;
             right: 15px;
@@ -139,7 +136,6 @@
             cursor: pointer;
         }
 
-        /* Cart Bar */
         .cart-bar {
             position: fixed;
             bottom: 30px;
@@ -196,7 +192,7 @@
 
 <section class="cart-bar">
     <div style="font-size: 0.85rem; letter-spacing: 0.5px;">
-        已選 <span id="cart-count">0</span> 項目 / HK$ <span id="cart-total">0</span>
+        已選 <span id="cart-count">0</span> / HK$ <span id="cart-total">0</span>
     </div>
     <button class="order-btn" onclick="submitOrder()">落單 ORDER</button>
 </section>
@@ -210,28 +206,35 @@
     let isAdmin = false;
     let fullMenu = [];
 
-    // 初始化與排序邏輯
+    // 初始化：按 sort_category 和 sort_name 排序
     async function init() {
-        const { data, error } = await _supabase.from('overcooked_menu').select('*').order('id');
+        const { data, error } = await _supabase
+            .from('overcooked_menu')
+            .select('*')
+            .order('sort_category', { ascending: true })
+            .order('sort_name', { ascending: true });
+
         if (error) {
             console.error(error);
             document.getElementById('menu-container').innerHTML = "暫時無法連線到廚房。";
             return;
         }
+        
         fullMenu = data;
         
-        // 自定義分類次序
-        const customOrder = ['早餐', '咖啡', '飲品', '小食', '小菜', '主食', '甜品'];
-        
-        const cats = [...new Set(data.map(i => i.category))].sort((a, b) => {
-            return customOrder.indexOf(a) - customOrder.indexOf(b);
+        // 自動提取已排序的分類 (利用 Map 保持第一次出現的順序)
+        const orderedCats = [];
+        data.forEach(item => {
+            if (!orderedCats.includes(item.category)) {
+                orderedCats.push(item.category);
+            }
         });
         
-        document.getElementById('category-tabs').innerHTML = cats.map((c, idx) => 
+        document.getElementById('category-tabs').innerHTML = orderedCats.map((c, idx) => 
             `<button class="tab-btn ${idx===0?'active':''}" onclick="changeTab(this, '${c}')">${c}</button>`
         ).join('');
         
-        render(cats[0]);
+        render(orderedCats[0]);
     }
 
     function render(cat) {
@@ -250,7 +253,7 @@
                 ${!item.is_available ? '<div class="sold-out-label">SOLD OUT</div>' : ''}
                 <div class="item-info">
                     <p class="item-name">${item.name}</p>
-                    <p class="item-desc">${item.description}</p>
+                    <p class="item-desc">${item.description || ''}</p>
                     <span class="item-price">$${item.price}</span>
                     <div class="admin-controls">
                         <button class="stock-btn" onclick="toggleStock('${item.id}', ${item.is_available})">
@@ -285,7 +288,7 @@
         const table = prompt("老闆想知你坐邊？(例如：梳化/餐桌)") || "未知";
         
         const summary = cart.reduce((a, c) => { a[c.name] = (a[c.name] || 0) + 1; return a; }, {});
-        const itemsStr = Object.entries(summary).map(([n, q]) => `${n}x${q}`).join(", ");
+        const itemsStr = Object.entries(summary).map(([n, q]) => `${n} x ${q}`).join(", ");
         const total = cart.reduce((s, i) => s + i.price, 0);
         
         const { error } = await _supabase.from('overcooked_orders').insert([{ 
@@ -295,7 +298,7 @@
         }]);
         
         if (!error) { 
-            alert("落單成功！請稍候，老闆正為你準備。"); 
+            alert("落單成功！請稍候。"); 
             cart = []; 
             updateUI();
         } else {
@@ -307,11 +310,11 @@
         if (prompt("請輸入老闆暗號：") === "1234") {
             isAdmin = true;
             document.body.classList.add('admin-mode');
-            document.getElementById('mode-status').innerText = "ADMIN MODE / 管理模式中";
-            init(); // 重新載入以顯示隱藏項目
+            document.getElementById('mode-status').innerText = "ADMIN MODE / 管理中";
+            init(); 
             setupRealtime();
         } else { 
-            alert("咁想改你入廚房煮🤤"); 
+            alert("密碼錯誤。"); 
         }
     }
 
@@ -323,15 +326,13 @@
     }
 
     function setupRealtime() {
-        // 防止重複訂閱
-        _supabase.channel('custom-insert-channel')
+        _supabase.channel('overcooked_orders')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'overcooked_orders' }, payload => {
             new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play();
             alert(`🛎️ 新訂單！\n${payload.new.items}\n位置：${payload.new.table_no}`);
         }).subscribe();
     }
 
-    // 啟動
     init();
 </script>
 </body>
