@@ -49,7 +49,7 @@
             letter-spacing: 2px; 
         }
 
-        /* --- Tabs Navigation with Scrolling Indicators --- */
+        /* --- Tabs Navigation --- */
         .tabs-wrapper {
             position: sticky;
             top: 0;
@@ -62,7 +62,7 @@
         }
 
         .scroll-hint {
-            width: 25px;
+            width: 30px;
             height: 50px;
             display: flex;
             align-items: center;
@@ -108,7 +108,16 @@
             position: relative; overflow: hidden;
             border: 1px solid rgba(197, 160, 89, 0.1);
         }
-        .item-img { width: 100%; height: 240px; object-fit: cover; background-color: #f0f0f0; }
+        /* 圖片容器與物件位置設定 */
+        .item-img { 
+            width: 100%; 
+            height: 240px; 
+            object-fit: cover; 
+            background-color: #f0f0f0; 
+            display: block;
+            /* 預設置中，稍後會由 JS 動態調整 */
+            object-position: center; 
+        }
         .item-info { padding: 18px; text-align: left; }
         .item-name { font-size: 1.1rem; font-weight: 500; margin: 0; letter-spacing: 1px; }
         .item-desc { font-size: 0.8rem; color: #777; margin: 10px 0 15px; min-height: 2.4em; }
@@ -179,14 +188,14 @@
 <body>
 
 <header>
-    <h1 onclick="handleAdminToggle()">OVERCOOKED CAFE</h1>
+    <h1 id="brand-title" onclick="handleAdminToggle()">OVERCOOKED CAFE</h1>
     <div id="mode-status">Casual Dining</div>
 </header>
 
 <div class="tabs-wrapper">
-    <div class="scroll-hint">‹</div>
+    <div class="scroll-hint" onclick="document.getElementById('category-tabs').scrollBy({left: -100, behavior: 'smooth'})">‹</div>
     <nav id="category-tabs" class="tabs"></nav>
-    <div class="scroll-hint">›</div>
+    <div class="scroll-hint" onclick="document.getElementById('category-tabs').scrollBy({left: 100, behavior: 'smooth'})">›</div>
 </div>
 
 <main id="menu-view" class="view-container active">
@@ -229,11 +238,9 @@
         const cats = [...new Set(fullMenu.map(i => i.category))];
         const tabsContainer = document.getElementById('category-tabs');
         
-        // 初始載入設定
         if (!targetCategory && cats.length > 0) targetCategory = cats[0];
         currentCategory = targetCategory;
 
-        // 渲染 Tabs
         let tabsHtml = cats.map(c => 
             `<button class="tab-btn ${c === currentCategory ? 'active' : ''}" onclick="changeTab(this, '${c}')">${c}</button>`
         ).join('');
@@ -241,14 +248,12 @@
         tabsHtml += `<button class="tab-btn record-tab ${currentCategory === 'RECORD' ? 'active' : ''}" onclick="changeToHistory(this)">RECORD</button>`;
         tabsContainer.innerHTML = tabsHtml;
 
-        // 渲染內容
         if (currentCategory === "RECORD") {
             generateSummary();
         } else {
             renderMenu(currentCategory);
         }
 
-        // 回到頂部邏輯
         if (shouldScrollTop) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -258,13 +263,10 @@
         currentCategory = cat;
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        
         document.getElementById('menu-view').classList.add('active');
         document.getElementById('history-view').classList.remove('active');
         document.getElementById('cart-bar').style.display = 'flex';
-        
         renderMenu(cat);
-        // 切換分類時回到頁面頂端
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -272,11 +274,9 @@
         currentCategory = "RECORD";
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        
         document.getElementById('menu-view').classList.remove('active');
         document.getElementById('history-view').classList.add('active');
         document.getElementById('cart-bar').style.display = 'none';
-        
         generateSummary();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -290,13 +290,22 @@
             const isAvail = String(item.is_available).toUpperCase() === 'TRUE';
             if (!isAdmin && !isAvail) return;
 
+            // 解析圖片位置: 檢查 description 是否包含 "pos: xxx"
+            let imgPos = "center"; // 預設值
+            let cleanDesc = item.description || "";
+            if (cleanDesc.includes("pos:")) {
+                const parts = cleanDesc.split("pos:");
+                imgPos = parts[1].trim();
+                cleanDesc = parts[0].trim(); // 顯示時把 pos 標記隱藏
+            }
+
             const div = document.createElement('div');
             div.className = `menu-item ${!isAvail ? 'unavailable' : ''}`;
             div.innerHTML = `
-                <img src="${item.image_url}" class="item-img" onerror="this.src='https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400'">
+                <img src="${item.image_url}" class="item-img" style="object-position: ${imgPos}" onerror="this.src='https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400'">
                 <div class="item-info">
                     <p class="item-name">${item.name}</p>
-                    <p class="item-desc">${item.description || ''}</p>
+                    <p class="item-desc">${cleanDesc}</p>
                     <span class="item-price">$${item.price}</span>
                     <div class="admin-controls">
                         <button style="border:1px solid #ccc; background:#fff; padding:6px 12px; font-size:12px; border-radius:4px; cursor:pointer;" 
@@ -312,7 +321,6 @@
     }
 
     async function toggleStock(id, status) {
-        // 更新時不觸發 ScrollTop，讓管理員留在原位編輯
         const { error } = await _supabase.from('overcooked_menu').update({ is_available: !status }).eq('id', id);
         if (!error) {
             await init(currentCategory, false); 
@@ -338,7 +346,7 @@
         }
     }
 
-    // --- 購物車與紀錄邏輯 ---
+    // --- 購物車與統計邏輯 ---
     function addToCart(name, price) {
         cart.push({name, price});
         updateCartUI();
@@ -397,7 +405,6 @@
 
     function guestCheckout() { alert("本日老闆請客！\n(It's on the house today. Enjoy!)"); }
 
-    // 初始化
     init();
 </script>
 
