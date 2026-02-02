@@ -13,6 +13,7 @@
             --lv-white: #FFFFFF;
             --lv-red: #9B301A;
             --lv-grey: #f4f4f4;
+            --lv-border: rgba(197, 160, 89, 0.2);
         }
 
         body {
@@ -49,7 +50,7 @@
             letter-spacing: 2px; 
         }
 
-        /* --- Tabs Navigation with Arrows --- */
+        /* Tabs Navigation */
         .tabs-wrapper {
             position: sticky;
             top: 0;
@@ -58,10 +59,11 @@
             display: flex;
             align-items: center;
             border-bottom: 1px solid #eee;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
-        .scroll-indicator {
-            width: 30px;
+        .scroll-hint {
+            width: 35px;
             height: 50px;
             display: flex;
             align-items: center;
@@ -69,8 +71,10 @@
             background: var(--lv-white);
             color: var(--lv-gold);
             font-weight: bold;
-            opacity: 0.5;
+            font-size: 1.2rem;
             flex-shrink: 0;
+            cursor: pointer;
+            opacity: 0.7;
         }
 
         .tabs {
@@ -103,9 +107,9 @@
             background: var(--lv-white); margin-bottom: 30px;
             border-radius: 2px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);
             position: relative; overflow: hidden;
-            border: 1px solid rgba(197, 160, 89, 0.1);
+            border: 1px solid var(--lv-border);
         }
-        .item-img { width: 100%; height: 240px; object-fit: cover; background-color: #f0f0f0; }
+        .item-img { width: 100%; height: 240px; object-fit: cover; background-color: #f0f0f0; display: block; }
         .item-info { padding: 18px; text-align: left; }
         .item-name { font-size: 1.1rem; font-weight: 500; margin: 0; letter-spacing: 1px; }
         .item-desc { font-size: 0.8rem; color: #777; margin: 10px 0 15px; min-height: 2.4em; }
@@ -117,60 +121,75 @@
             color: var(--lv-white); width: 38px; height: 38px;
             border-radius: 50%; font-size: 1.2rem; cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-            transition: 0.2s;
         }
-        .add-btn:active { transform: scale(0.9); background: var(--lv-gold); }
 
-        /* Cart Bar */
+        /* --- Admin Record UI (Kitchen Style) --- */
+        .order-card { 
+            background: #fff; 
+            border: 1px solid #ddd; 
+            border-left: 4px solid var(--lv-gold); 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            border-radius: 4px;
+        }
+        .order-time { 
+            font-size: 0.75rem; 
+            color: #888; 
+            margin-bottom: 8px; 
+            font-weight: bold; 
+            border-bottom: 1px solid #eee; 
+            padding-bottom: 5px; 
+        }
+        .order-item-row { 
+            display: flex; 
+            align-items: center; 
+            padding: 8px 0; 
+            border-bottom: 1px dashed #f0f0f0; 
+        }
+        .order-item-row:last-child { border-bottom: none; }
+        .order-checkbox { 
+            width: 20px; 
+            height: 20px; 
+            margin-right: 12px; 
+            cursor: pointer; 
+            accent-color: var(--lv-gold); 
+        }
+        .item-txt { flex-grow: 1; font-size: 0.9rem; }
+
+        /* Summary Table (User View) */
+        .summary-table {
+            width: 100%; border-collapse: collapse; font-size: 0.85rem; background: #fff;
+        }
+        .summary-table th {
+            text-align: left; padding: 12px; background: var(--lv-grey); border-bottom: 2px solid var(--lv-gold);
+        }
+        .summary-table td { padding: 12px; border-bottom: 1px solid #eee; }
+
+        /* Cart & Buttons */
         .cart-bar {
             position: fixed; bottom: 25px; left: 20px; right: 20px;
             background: var(--lv-dark); color: var(--lv-white);
             padding: 12px 20px; border-radius: 4px;
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
-            backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 1000;
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
         }
-        
-        .cart-info { font-size: 0.9rem; letter-spacing: 1px; font-weight: 500; }
         .order-btn {
             background: var(--lv-gold); color: var(--lv-white);
             border: none; padding: 10px 20px; border-radius: 2px;
             font-size: 0.8rem; font-weight: 600; cursor: pointer;
-            letter-spacing: 1px;
         }
 
-        /* Summary Table */
-        .summary-table {
-            width: 100%; border-collapse: collapse; font-size: 0.85rem;
-            background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        .summary-table th {
-            text-align: left; padding: 12px; background: var(--lv-grey);
-            font-weight: 600; border-bottom: 2px solid var(--lv-gold);
-        }
-        .summary-table td { padding: 12px; border-bottom: 1px solid #eee; }
-        
-        .grand-total-row {
-            margin-top: 15px; padding: 15px; background: var(--lv-dark);
-            color: var(--lv-white); display: flex; justify-content: space-between;
-            align-items: center; font-size: 1.1rem; border-radius: 2px;
-        }
-
-        /* Admin Controls */
-        .admin-controls { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee; }
+        .admin-controls { display: none; margin-top: 10px; border-top: 1px dashed #eee; padding-top: 10px; }
         .admin-mode .admin-controls { display: block; }
-        .admin-mode .clear-history-btn { display: inline-block; }
-        .admin-mode .guest-checkout-btn { display: none; }
-        
         .unavailable { filter: grayscale(1); opacity: 0.4; }
         
         .guest-checkout-btn, .clear-history-btn {
             width: 100%; padding: 14px; border: none; border-radius: 2px;
-            font-size: 0.9rem; letter-spacing: 2px; cursor: pointer; margin-bottom: 10px;
+            font-size: 0.9rem; cursor: pointer; margin-bottom: 10px;
         }
         .guest-checkout-btn { background: var(--lv-gold); color: #fff; }
         .clear-history-btn { background: var(--lv-red); color: #fff; display: none; }
+        .admin-mode .clear-history-btn { display: block; }
+        .admin-mode .guest-checkout-btn { display: none; }
     </style>
 </head>
 <body>
@@ -181,9 +200,9 @@
 </header>
 
 <div class="tabs-wrapper">
-    <div class="scroll-indicator">‹</div>
+    <div class="scroll-hint" onclick="document.getElementById('category-tabs').scrollBy({left: -120, behavior: 'smooth'})">‹</div>
     <nav id="category-tabs" class="tabs"></nav>
-    <div class="scroll-indicator">›</div>
+    <div class="scroll-hint" onclick="document.getElementById('category-tabs').scrollBy({left: 120, behavior: 'smooth'})">›</div>
 </div>
 
 <main id="menu-view" class="view-container active">
@@ -193,7 +212,7 @@
 <section id="history-view" class="view-container">
     <div id="summary-header" style="font-size: 0.9rem; font-weight: 600; margin-bottom: 15px; text-align: center; letter-spacing: 1px;">ORDER SUMMARY</div>
     <div id="summary-container"></div>
-    <div class="action-area">
+    <div class="action-area" style="margin-top: 20px;">
         <button class="guest-checkout-btn" onclick="guestCheckout()">VIP CHECKOUT 結帳</button>
         <button class="clear-history-btn" onclick="clearAllOrders()">CLEAR ALL 清空紀錄</button>
     </div>
@@ -209,12 +228,11 @@
     const SUPABASE_KEY = 'sb_publishable_bnnah-2fsCaQnKZDoKNJQw_NuYQVvKi';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // --- Admin 語音與 Polling 相關變數 ---
+    // --- Admin Sound & Polling ---
     const ORDER_ALERT_SOUND_URL = './ScreenRecording_02-02-2026 21-26-23_1.m4a'; 
     const newOrderAudio = new Audio(ORDER_ALERT_SOUND_URL);
     let pollingInterval = null;
     let lastSeenOrderTime = null;
-    // -------------------------------------------
 
     let cart = [];
     let isAdmin = false;
@@ -233,9 +251,11 @@
         const tabsContainer = document.getElementById('category-tabs');
         if (!targetCategory && cats.length > 0) targetCategory = cats[0];
         currentCategory = targetCategory;
+        
         let tabsHtml = cats.map(c => `<button class="tab-btn ${c === currentCategory ? 'active' : ''}" onclick="changeTab(this, '${c}')">${c}</button>`).join('');
         tabsHtml += `<button class="tab-btn record-tab ${currentCategory === 'RECORD' ? 'active' : ''}" onclick="changeToHistory(this)">RECORD</button>`;
         tabsContainer.innerHTML = tabsHtml;
+
         if (currentCategory === "RECORD") {
             generateSummary();
         } else {
@@ -302,9 +322,10 @@
     }
 
     async function generateSummary() {
+        // 從舊到新排列
         const { data: orders, error } = await _supabase.from('overcooked_orders').select('*').order('created_at', { ascending: true });
         const container = document.getElementById('summary-container');
-        const header = document.getElementById('summary-header'); // 現在能正確找到 ID 了
+        const header = document.getElementById('summary-header');
 
         if (!orders || orders.length === 0) {
             container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">NO ORDERS YET</p>';
@@ -365,17 +386,13 @@
         if (!isAdmin) {
             const pwd = prompt("Admin Password:");
             if (pwd === "1234") {
-                // [修正 2] 嚴格的靜音解鎖順序
-                // 1. 先強制靜音
+                // 語音解鎖
                 newOrderAudio.muted = true;
-                
-                // 2. 執行播放，並在 Promise 完成後才暫停並恢復音量
                 newOrderAudio.play().then(() => {
                     newOrderAudio.pause();
                     newOrderAudio.currentTime = 0;
-                    // 關鍵：確保暫停後才取消靜音，防止漏出聲音
                     newOrderAudio.muted = false; 
-                }).catch(e => console.log("Unlock failed", e));
+                }).catch(e => console.log("Audio Unlock failed", e));
 
                 isAdmin = true;
                 document.body.classList.add('admin-mode');
@@ -384,14 +401,13 @@
                 await startAdminPolling();
                 init(currentCategory, false);
             } else if (pwd !== null) { 
-                alert("咁想幫手你入嚟廚房同我一齊煮？");
+                alert("密碼錯誤");
             }
         } else {
             if (confirm("確定要登出管理員模式嗎？")) {
                 isAdmin = false;
                 document.body.classList.remove('admin-mode');
                 document.getElementById('mode-status').innerText = "Casual Dining";
-                
                 stopAdminPolling();
                 init(currentCategory, false);
             }
@@ -399,55 +415,41 @@
     }
 
     async function startAdminPolling() {
-        const { data, error } = await _supabase
-            .from('overcooked_orders')
-            .select('created_at')
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-        if (data && data.length > 0) {
-            lastSeenOrderTime = data[0].created_at;
-        } else {
-            lastSeenOrderTime = new Date().toISOString();
-        }
+        const { data } = await _supabase.from('overcooked_orders').select('created_at').order('created_at', { ascending: false }).limit(1);
+        lastSeenOrderTime = (data && data.length > 0) ? data[0].created_at : new Date().toISOString();
 
         pollingInterval = setInterval(async () => {
             if (!isAdmin) return;
-
-            const { data: newOrders } = await _supabase
-                .from('overcooked_orders')
-                .select('created_at')
-                .gt('created_at', lastSeenOrderTime)
-                .order('created_at', { ascending: false });
+            const { data: newOrders } = await _supabase.from('overcooked_orders').select('created_at').gt('created_at', lastSeenOrderTime).order('created_at', { ascending: false });
 
             if (newOrders && newOrders.length > 0) {
                 lastSeenOrderTime = newOrders[0].created_at;
-
                 newOrderAudio.currentTime = 0;
                 newOrderAudio.play().catch(e => console.error("Audio Play Error:", e));
-
-                generateSummary();
+                if (currentCategory === "RECORD") generateSummary();
             }
         }, 4000);
     }
 
     function stopAdminPolling() {
-        if (pollingInterval) {
-            clearInterval(pollingInterval);
-            pollingInterval = null;
-        }
+        if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
     }
 
-    function addToCart(name, price) { cart.push({name, price});
-        updateCartUI(); }
-    function updateCartUI() { document.getElementById('cart-count').innerText = cart.length; document.getElementById('cart-total').innerText = cart.reduce((s, i) => s + i.price, 0);
+    function addToCart(name, price) { cart.push({name, price}); updateCartUI(); }
+    function updateCartUI() { 
+        document.getElementById('cart-count').innerText = cart.length; 
+        document.getElementById('cart-total').innerText = cart.reduce((s, i) => s + i.price, 0);
     }
 
     async function submitOrder() {
         if (cart.length === 0) return alert("請先選擇餐點");
         const summary = cart.reduce((a, c) => { a[c.name] = (a[c.name] || 0) + 1; return a; }, {});
         const itemsStr = Object.entries(summary).map(([n, q]) => `${n} x ${q}`).join(", ");
-        const { error } = await _supabase.from('overcooked_orders').insert([{ items: itemsStr, total_price: cart.reduce((s, i) => s + i.price, 0), table_no: 'Table-1' }]);
+        const { error } = await _supabase.from('overcooked_orders').insert([{ 
+            items: itemsStr, 
+            total_price: cart.reduce((s, i) => s + i.price, 0), 
+            table_no: 'Table-1' 
+        }]);
         if (!error) { alert("下單成功！"); cart = []; updateCartUI(); }
     }
 
@@ -458,8 +460,8 @@
         }
     }
 
-    function guestCheckout() { alert("本日老闆請客！\n(It's on the house today. Enjoy!)");
-    }
+    function guestCheckout() { alert("本日老闆請客！\n(It's on the house today. Enjoy!)"); }
+    
     init();
 </script>
 
