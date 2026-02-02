@@ -209,39 +209,40 @@
     const SUPABASE_KEY = 'sb_publishable_bnnah-2fsCaQnKZDoKNJQw_NuYQVvKi';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // --- [新增] Admin 語音與 Polling 相關變數 ---
+    // 請將此處 URL 替換為您的實際音檔連結 (內容：系統女聲：小哈比幫你接咗一張新訂單)
+    const ORDER_ALERT_SOUND_URL = 'https://www.dropbox.com/scl/fi/placeholder/new_order_alert.mp3?rlkey=placeholder&raw=1'; 
+    const newOrderAudio = new Audio(ORDER_ALERT_SOUND_URL);
+    let pollingInterval = null;
+    let lastSeenOrderTime = null;
+    // -------------------------------------------
+
     let cart = [];
     let isAdmin = false;
     let fullMenu = [];
-    let currentCategory = ""; // 紀錄目前所在的分類
+    let currentCategory = ""; 
 
-    async function init(targetCategory = null) {
+    async function init(targetCategory = null, shouldScrollTop = false) {
         const { data: menuData, error } = await _supabase
             .from('overcooked_menu')
             .select('*')
             .order('"sort category"', { ascending: true })
             .order('"sort name"', { ascending: true });
-
         if (!error) fullMenu = menuData || [];
 
         const cats = [...new Set(fullMenu.map(i => i.category))];
         const tabsContainer = document.getElementById('category-tabs');
-        
-        // 如果沒有指定分類，則設為第一個
         if (!targetCategory && cats.length > 0) targetCategory = cats[0];
         currentCategory = targetCategory;
-
-        // 渲染 Tabs
-        let tabsHtml = cats.map(c => 
-            `<button class="tab-btn ${c === currentCategory ? 'active' : ''}" onclick="changeTab(this, '${c}')">${c}</button>`
-        ).join('');
-
-        tabsHtml += `<button class="tab-btn record-tab" onclick="changeToHistory(this)">RECORD</button>`;
+        let tabsHtml = cats.map(c => `<button class="tab-btn ${c === currentCategory ? 'active' : ''}" onclick="changeTab(this, '${c}')">${c}</button>`).join('');
+        tabsHtml += `<button class="tab-btn record-tab ${currentCategory === 'RECORD' ? 'active' : ''}" onclick="changeToHistory(this)">RECORD</button>`;
         tabsContainer.innerHTML = tabsHtml;
-
-        // 渲染選單（如果是 RECORD 頁面則不執行 renderMenu）
-        if (currentCategory !== "RECORD") {
+        if (currentCategory === "RECORD") {
+            generateSummary();
+        } else {
             renderMenu(currentCategory);
         }
+        if (shouldScrollTop) window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function changeTab(btn, cat) {
@@ -252,6 +253,7 @@
         document.getElementById('history-view').classList.remove('active');
         document.getElementById('cart-bar').style.display = 'flex';
         renderMenu(cat);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function changeToHistory(btn) {
@@ -262,28 +264,34 @@
         document.getElementById('history-view').classList.add('active');
         document.getElementById('cart-bar').style.display = 'none';
         generateSummary();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function renderMenu(cat) {
         const container = document.getElementById('menu-container');
         container.innerHTML = '';
         const items = fullMenu.filter(i => i.category === cat);
-
         items.forEach(item => {
             const isAvail = String(item.is_available).toUpperCase() === 'TRUE';
             if (!isAdmin && !isAvail) return;
 
+            let imgPos = "center", rawDesc = item.description || "", cleanDesc = rawDesc;
+            const posMatch = rawDesc.match(/pos:\s*([^,;]+)/i);
+            if (posMatch) {
+                imgPos = posMatch[1].trim(); 
+                cleanDesc = rawDesc.replace(/pos:\s*[^,;]+/i, "").trim();
+            }
+
             const div = document.createElement('div');
             div.className = `menu-item ${!isAvail ? 'unavailable' : ''}`;
             div.innerHTML = `
-                <img src="${item.image_url}" class="item-img" onerror="this.src='https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400'">
+                <img src="${item.image_url}" class="item-img" style="object-position: center ${imgPos}" onerror="this.src='https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400'">
                 <div class="item-info">
                     <p class="item-name">${item.name}</p>
-                    <p class="item-desc">${item.description || ''}</p>
+                    <p class="item-desc">${cleanDesc}</p>
                     <span class="item-price">$${item.price}</span>
                     <div class="admin-controls">
-                        <button style="border:1px solid #ccc; background:#fff; padding:6px 12px; font-size:12px; border-radius:4px; cursor:pointer;" 
-                                onclick="toggleStock(${item.id}, ${isAvail})">
+                        <button style="border:1px solid #ccc; background:#fff; padding:6px 12px; font-size:12px; border-radius:4px;" onclick="toggleStock(${item.id}, ${isAvail})">
                             ${isAvail ? '設為售罄' : '設為供應'}
                         </button>
                     </div>
@@ -294,82 +302,171 @@
         });
     }
 
-    // 更新庫存狀態後，維持在當前分類
-    async function toggleStock(id, status) {
-        const { error } = await _supabase.from('overcooked_menu').update({ is_available: !status }).eq('id', id);
-        if (!error) {
-            await init(currentCategory); // 傳入當前分類，避免跳轉
+    async function generateSummary() {
+        // 從舊到新排列 (created_at ascending)
+        const { data: orders, error } = await _supabase.from('overcooked_orders').select('*').order('created_at', { ascending: true });
+        const container = document.getElementById('summary-container');
+        const header = document.getElementById('summary-header');
+
+        if (!orders || orders.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">NO ORDERS YET</p>';
+            return;
+        }
+
+        if (isAdmin) {
+            // --- 管理員模式：流水帳 + 廚房勾選 ---
+            header.innerText = "KITCHEN ORDER MANAGEMENT";
+            let html = '';
+            orders.forEach(order => {
+                const timeStr = new Date(order.created_at).toLocaleTimeString('zh-HK', { hour12: false });
+                html += `
+                    <div class="order-card">
+                        <div class="order-time">ORDER AT ${timeStr}</div>
+                        <div class="order-items">
+                            ${order.items.split(',').map(item => `
+                                <div class="order-item-row">
+                                    <input type="checkbox" class="order-checkbox" onclick="event.stopPropagation()">
+                                    <span class="item-txt">${item.trim()}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        } else {
+            // --- 用戶模式：維持現有總量統計 ---
+            header.innerText = "YOUR ORDER SUMMARY";
+            let aggregatedData = {};
+            orders.forEach(order => {
+                order.items.split(',').forEach(itemStr => {
+                    const match = itemStr.trim().match(/(.+) x (\d+)/);
+                    if (match) {
+                        const name = match[1].trim(), qty = parseInt(match[2]);
+                        aggregatedData[name] = (aggregatedData[name] || 0) + qty;
+                    }
+                });
+            });
+            let tableHtml = `<table class="summary-table"><thead><tr><th>ITEM</th><th style="text-align:center">QTY</th><th style="text-align:right">TOTAL</th></tr></thead><tbody>`;
+            let grandTotal = 0;
+            for (const [name, qty] of Object.entries(aggregatedData)) {
+                const item = fullMenu.find(m => m.name === name);
+                const price = item ? item.price : 0;
+                grandTotal += (price * qty);
+                tableHtml += `<tr><td><strong>${name}</strong><br><small>$${price}/ea</small></td><td style="text-align:center">${qty}</td><td style="text-align:right">$${price*qty}</td></tr>`;
+            }
+            tableHtml += `</tbody></table><div class="grand-total-row" style="margin-top:15px; padding:15px; background:var(--lv-dark); color:#fff; display:flex; justify-content:space-between; border-radius:2px;"><span>TOTAL AMOUNT</span><span>$${grandTotal}</span></div>`;
+            container.innerHTML = tableHtml;
         }
     }
 
-    // 管理員登入/登出處理
-    function handleAdminToggle() {
+    // --- 管理與通用邏輯 ---
+    async function toggleStock(id, status) {
+        await _supabase.from('overcooked_menu').update({ is_available: !status }).eq('id', id);
+        init(currentCategory, false);
+    }
+
+    // --- [修改] Admin 登入與 Polling 觸發邏輯 ---
+    async function handleAdminToggle() {
         if (!isAdmin) {
-            const pw = prompt("Admin Password:");
-            if (pw === "1234") {
+            // 登入流程
+            const pwd = prompt("Admin Password:");
+            if (pwd === "1234") {
+                // 1. iOS Safari 音效解鎖 (由使用者點擊事件直接觸發)
+                newOrderAudio.load();
+                newOrderAudio.muted = true;
+                // 播放並立即暫停，僅為了取得權限
+                newOrderAudio.play().then(() => newOrderAudio.pause()).catch(() => {});
+                newOrderAudio.muted = false; // 恢復聲音準備下次播放
+
                 isAdmin = true;
                 document.body.classList.add('admin-mode');
                 document.getElementById('mode-status').innerText = "ADMIN MODE";
-                init(currentCategory);
+                
+                // 2. 啟動 Polling 機制
+                await startAdminPolling();
+
+                init(currentCategory, false);
+            } else if (pwd !== null) { 
+                // [新增] 密碼錯誤提示 (點擊取消不觸發)
+                alert("咁想幫手你入嚟廚房同我一齊煮？");
             }
         } else {
-            if (confirm("目前為管理員模式，確定要登出嗎？")) {
+            // 登出流程
+            if (confirm("確定要登出管理員模式嗎？")) {
                 isAdmin = false;
                 document.body.classList.remove('admin-mode');
                 document.getElementById('mode-status').innerText = "Casual Dining";
-                init(currentCategory);
+                
+                // [新增] 停止 Polling
+                stopAdminPolling();
+
+                init(currentCategory, false);
             }
         }
     }
 
-    // --- 其他功能保留 ---
-    function addToCart(name, price) {
-        cart.push({name, price});
-        updateCartUI();
+    // --- [新增] Polling 核心 Function ---
+    async function startAdminPolling() {
+        // A. 初始化：獲取當前最新訂單時間，作為基準點
+        const { data, error } = await _supabase
+            .from('overcooked_orders')
+            .select('created_at')
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        // 如果資料庫有單，設為最新一筆的時間；如果沒單，設為現在時間
+        if (data && data.length > 0) {
+            lastSeenOrderTime = data[0].created_at;
+        } else {
+            lastSeenOrderTime = new Date().toISOString();
+        }
+
+        // B. 設定 Polling (4秒一次)
+        pollingInterval = setInterval(async () => {
+            if (!isAdmin) return; // 安全守衛
+
+            // 查詢「比 lastSeenOrderTime 更新」的訂單
+            const { data: newOrders } = await _supabase
+                .from('overcooked_orders')
+                .select('created_at')
+                .gt('created_at', lastSeenOrderTime)
+                .order('created_at', { ascending: false });
+
+            // C. 觸發條件
+            if (newOrders && newOrders.length > 0) {
+                // 更新基準時間，避免重複觸發
+                lastSeenOrderTime = newOrders[0].created_at;
+
+                // 1. 播放音效
+                newOrderAudio.currentTime = 0;
+                newOrderAudio.play().catch(e => console.error("Audio Play Error:", e));
+
+                // 2. 更新畫面
+                generateSummary();
+            }
+        }, 4000);
     }
 
-    function updateCartUI() {
-        document.getElementById('cart-count').innerText = cart.length;
-        document.getElementById('cart-total').innerText = cart.reduce((s, i) => s + i.price, 0);
+    function stopAdminPolling() {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
+    }
+    // ------------------------------------
+
+    function addToCart(name, price) { cart.push({name, price});
+        updateCartUI(); }
+    function updateCartUI() { document.getElementById('cart-count').innerText = cart.length; document.getElementById('cart-total').innerText = cart.reduce((s, i) => s + i.price, 0);
     }
 
     async function submitOrder() {
         if (cart.length === 0) return alert("請先選擇餐點");
         const summary = cart.reduce((a, c) => { a[c.name] = (a[c.name] || 0) + 1; return a; }, {});
         const itemsStr = Object.entries(summary).map(([n, q]) => `${n} x ${q}`).join(", ");
-        const { error } = await _supabase.from('overcooked_orders').insert([{ 
-            items: itemsStr, total_price: cart.reduce((s, i) => s + i.price, 0), table_no: 'Table-1' 
-        }]);
+        const { error } = await _supabase.from('overcooked_orders').insert([{ items: itemsStr, total_price: cart.reduce((s, i) => s + i.price, 0), table_no: 'Table-1' }]);
         if (!error) { alert("下單成功！"); cart = []; updateCartUI(); }
-    }
-
-    async function generateSummary() {
-        const { data: orders } = await _supabase.from('overcooked_orders').select('items');
-        const container = document.getElementById('summary-container');
-        if (!orders || orders.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">NO ORDERS YET</p>';
-            return;
-        }
-        let aggregatedData = {};
-        orders.forEach(order => {
-            order.items.split(',').forEach(itemStr => {
-                const match = itemStr.trim().match(/(.+) x (\d+)/);
-                if (match) {
-                    const name = match[1].trim(), qty = parseInt(match[2]);
-                    aggregatedData[name] = (aggregatedData[name] || 0) + qty;
-                }
-            });
-        });
-        let tableHtml = `<table class="summary-table"><thead><tr><th>ITEM</th><th style="text-align:center">QTY</th><th style="text-align:right">TOTAL</th></tr></thead><tbody>`;
-        let grandTotal = 0;
-        for (const [name, qty] of Object.entries(aggregatedData)) {
-            const item = fullMenu.find(m => m.name === name);
-            const price = item ? item.price : 0;
-            grandTotal += (price * qty);
-            tableHtml += `<tr><td><strong>${name}</strong><br><small>$${price}/ea</small></td><td style="text-align:center">${qty}</td><td style="text-align:right">$${price*qty}</td></tr>`;
-        }
-        tableHtml += `</tbody></table><div class="grand-total-row"><span>TOTAL AMOUNT</span><span>$${grandTotal}</span></div>`;
-        container.innerHTML = tableHtml;
     }
 
     async function clearAllOrders() {
@@ -379,8 +476,8 @@
         }
     }
 
-    function guestCheckout() { alert("本日老闆請客！\n(It's on the house today. Enjoy!)"); }
-
+    function guestCheckout() { alert("本日老闆請客！\n(It's on the house today. Enjoy!)");
+    }
     init();
 </script>
 
