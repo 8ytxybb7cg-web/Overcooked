@@ -191,7 +191,7 @@
 </main>
 
 <section id="history-view" class="view-container">
-    <div style="font-size: 0.9rem; font-weight: 600; margin-bottom: 15px; text-align: center; letter-spacing: 1px;">ORDER SUMMARY</div>
+    <div id="summary-header" style="font-size: 0.9rem; font-weight: 600; margin-bottom: 15px; text-align: center; letter-spacing: 1px;">ORDER SUMMARY</div>
     <div id="summary-container"></div>
     <div class="action-area">
         <button class="guest-checkout-btn" onclick="guestCheckout()">VIP CHECKOUT 結帳</button>
@@ -209,8 +209,7 @@
     const SUPABASE_KEY = 'sb_publishable_bnnah-2fsCaQnKZDoKNJQw_NuYQVvKi';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // --- [新增] Admin 語音與 Polling 相關變數 ---
-    // 請將此處 URL 替換為您的實際音檔連結 (內容：系統女聲：小哈比幫你接咗一張新訂單)
+    // --- Admin 語音與 Polling 相關變數 ---
     const ORDER_ALERT_SOUND_URL = './ScreenRecording_02-02-2026 21-26-23_1.m4a'; 
     const newOrderAudio = new Audio(ORDER_ALERT_SOUND_URL);
     let pollingInterval = null;
@@ -303,10 +302,9 @@
     }
 
     async function generateSummary() {
-        // 從舊到新排列 (created_at ascending)
         const { data: orders, error } = await _supabase.from('overcooked_orders').select('*').order('created_at', { ascending: true });
         const container = document.getElementById('summary-container');
-        const header = document.getElementById('summary-header');
+        const header = document.getElementById('summary-header'); // 現在能正確找到 ID 了
 
         if (!orders || orders.length === 0) {
             container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">NO ORDERS YET</p>';
@@ -314,7 +312,6 @@
         }
 
         if (isAdmin) {
-            // --- 管理員模式：流水帳 + 廚房勾選 ---
             header.innerText = "KITCHEN ORDER MANAGEMENT";
             let html = '';
             orders.forEach(order => {
@@ -335,7 +332,6 @@
             });
             container.innerHTML = html;
         } else {
-            // --- 用戶模式：維持現有總量統計 ---
             header.innerText = "YOUR ORDER SUMMARY";
             let aggregatedData = {};
             orders.forEach(order => {
@@ -360,89 +356,76 @@
         }
     }
 
-    // --- 管理與通用邏輯 ---
     async function toggleStock(id, status) {
         await _supabase.from('overcooked_menu').update({ is_available: !status }).eq('id', id);
         init(currentCategory, false);
     }
 
-    // --- [修改] Admin 登入與 Polling 觸發邏輯 ---
     async function handleAdminToggle() {
         if (!isAdmin) {
-            // 登入流程
             const pwd = prompt("Admin Password:");
             if (pwd === "1234") {
-                // 1. iOS Safari 音效解鎖 (由使用者點擊事件直接觸發)
-                newOrderAudio.load();
+                // [修正 2] 嚴格的靜音解鎖順序
+                // 1. 先強制靜音
                 newOrderAudio.muted = true;
-                // 播放並立即暫停，僅為了取得權限
-                newOrderAudio.play().then(() => newOrderAudio.pause()).catch(() => {});
-                newOrderAudio.muted = false; // 恢復聲音準備下次播放
+                
+                // 2. 執行播放，並在 Promise 完成後才暫停並恢復音量
+                newOrderAudio.play().then(() => {
+                    newOrderAudio.pause();
+                    newOrderAudio.currentTime = 0;
+                    // 關鍵：確保暫停後才取消靜音，防止漏出聲音
+                    newOrderAudio.muted = false; 
+                }).catch(e => console.log("Unlock failed", e));
 
                 isAdmin = true;
                 document.body.classList.add('admin-mode');
                 document.getElementById('mode-status').innerText = "ADMIN MODE";
                 
-                // 2. 啟動 Polling 機制
                 await startAdminPolling();
-
                 init(currentCategory, false);
             } else if (pwd !== null) { 
-                // [新增] 密碼錯誤提示 (點擊取消不觸發)
                 alert("咁想幫手你入嚟廚房同我一齊煮？");
             }
         } else {
-            // 登出流程
             if (confirm("確定要登出管理員模式嗎？")) {
                 isAdmin = false;
                 document.body.classList.remove('admin-mode');
                 document.getElementById('mode-status').innerText = "Casual Dining";
                 
-                // [新增] 停止 Polling
                 stopAdminPolling();
-
                 init(currentCategory, false);
             }
         }
     }
 
-    // --- [新增] Polling 核心 Function ---
     async function startAdminPolling() {
-        // A. 初始化：獲取當前最新訂單時間，作為基準點
         const { data, error } = await _supabase
             .from('overcooked_orders')
             .select('created_at')
             .order('created_at', { ascending: false })
             .limit(1);
 
-        // 如果資料庫有單，設為最新一筆的時間；如果沒單，設為現在時間
         if (data && data.length > 0) {
             lastSeenOrderTime = data[0].created_at;
         } else {
             lastSeenOrderTime = new Date().toISOString();
         }
 
-        // B. 設定 Polling (4秒一次)
         pollingInterval = setInterval(async () => {
-            if (!isAdmin) return; // 安全守衛
+            if (!isAdmin) return;
 
-            // 查詢「比 lastSeenOrderTime 更新」的訂單
             const { data: newOrders } = await _supabase
                 .from('overcooked_orders')
                 .select('created_at')
                 .gt('created_at', lastSeenOrderTime)
                 .order('created_at', { ascending: false });
 
-            // C. 觸發條件
             if (newOrders && newOrders.length > 0) {
-                // 更新基準時間，避免重複觸發
                 lastSeenOrderTime = newOrders[0].created_at;
 
-                // 1. 播放音效
                 newOrderAudio.currentTime = 0;
                 newOrderAudio.play().catch(e => console.error("Audio Play Error:", e));
 
-                // 2. 更新畫面
                 generateSummary();
             }
         }, 4000);
@@ -454,7 +437,6 @@
             pollingInterval = null;
         }
     }
-    // ------------------------------------
 
     function addToCart(name, price) { cart.push({name, price});
         updateCartUI(); }
