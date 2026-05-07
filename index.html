@@ -98,7 +98,7 @@
         .item-txt { flex-grow: 1; font-size: 0.9rem;
         }
 
-        /* Summary Table (User View) */
+        /* Summary Table */
         .summary-table { width: 100%;
             border-collapse: collapse; font-size: 0.85rem; background: #fff; }
         .summary-table th { text-align: left;
@@ -111,7 +111,8 @@
             bottom: 25px; left: 20px; right: 20px; background: var(--lv-dark); color: var(--lv-white); padding: 12px 20px; border-radius: 4px; display: flex; justify-content: space-between;
             align-items: center; z-index: 1000; cursor: pointer; transition: 0.2s; }
         .cart-bar:active { opacity: 0.9; }
-        .cart-info { flex-grow: 1; user-select: none; }
+        .cart-info { flex-grow: 1; user-select: none; font-size: 0.9rem; }
+        #cart-arrow { margin-right: 8px; font-size: 0.7rem; transition: 0.3s; }
         .order-btn { background: var(--lv-gold); color: var(--lv-white); border: none;
             padding: 10px 20px; border-radius: 2px; font-size: 0.8rem; font-weight: 600; cursor: pointer; position: relative; z-index: 2;
         }
@@ -132,7 +133,7 @@
         .admin-mode .guest-checkout-btn { display: none;
         }
 
-        /* Cart Details Popup (New Feature) */
+        /* Cart Details Popup */
         .cart-details-panel {
             position: fixed;
             bottom: 85px; 
@@ -238,11 +239,12 @@
     </div>
 </section>
 
-<div id="cart-details" class="cart-details-panel">
-    </div>
+<div id="cart-details" class="cart-details-panel"></div>
 
 <section class="cart-bar" id="cart-bar" onclick="handleCartBarClick(event)">
-    <div class="cart-info">SELECTED <span id="cart-count">0</span> &nbsp;&nbsp; $<span id="cart-total">0</span></div>
+    <div class="cart-info">
+        <span id="cart-arrow"></span>SELECTED <span id="cart-count">0</span> &nbsp;&nbsp; $<span id="cart-total">0</span>
+    </div>
     <button class="order-btn" onclick="submitOrder(event)">PLACE ORDER</button>
 </section>
 
@@ -251,7 +253,6 @@
     const SUPABASE_KEY = 'sb_publishable_bnnah-2fsCaQnKZDoKNJQw_NuYQVvKi';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // 修改 cart 結構，加入數量屬性： [{name, price, qty}]
     let cart = [];
     let isAdmin = false;
     let fullMenu = [];
@@ -415,7 +416,6 @@
         }
     }
 
-    // --- 購物車新邏輯：支援數量累加與刪除 ---
     function addToCart(name, price) { 
         const existingItem = cart.find(c => c.name === name);
         if (existingItem) {
@@ -425,12 +425,12 @@
         }
         updateCartUI();
         
-        // 若明細面板已開啟，同步更新畫面
         if(document.getElementById('cart-details').classList.contains('show')) {
             renderCartDetails();
         }
     }
 
+    // --- 核心邏輯：更新箭頭與數量顯示 ---
     function updateCartUI() { 
         const count = cart.reduce((sum, item) => sum + item.qty, 0);
         const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
@@ -438,28 +438,35 @@
         document.getElementById('cart-count').innerText = count; 
         document.getElementById('cart-total').innerText = total;
 
+        const arrowSpan = document.getElementById('cart-arrow');
+        const panel = document.getElementById('cart-details');
+
         if (count === 0) {
-            document.getElementById('cart-details').classList.remove('show');
+            panel.classList.remove('show');
+            arrowSpan.innerText = "";
+        } else {
+            // 根據面板是否顯示來決定箭頭方向
+            arrowSpan.innerText = panel.classList.contains('show') ? "▼ " : "▲ ";
         }
     }
 
-    // --- 點擊過濾邏輯：只在點擊黑色區域時觸發 ---
     function handleCartBarClick(event) {
-        // 如果點擊的是按鈕或其子元素，則不處理面板邏輯，直接交給按鈕的 onclick
-        if (event.target.closest('.order-btn')) {
-            return;
-        }
+        if (event.target.closest('.order-btn')) return;
         toggleCartDetails();
     }
 
     function toggleCartDetails() {
         const panel = document.getElementById('cart-details');
+        const arrowSpan = document.getElementById('cart-arrow');
+        
         if (panel.classList.contains('show')) {
             panel.classList.remove('show');
+            if (cart.length > 0) arrowSpan.innerText = "▲ ";
         } else {
             if (cart.length > 0) {
                 renderCartDetails();
                 panel.classList.add('show');
+                arrowSpan.innerText = "▼ ";
             }
         }
     }
@@ -503,9 +510,7 @@
     }
 
     async function submitOrder(event) {
-        // 防止事件冒泡觸發底層的 handleCartBarClick (雙重保險)
         if(event) event.stopPropagation();
-
         if (cart.length === 0) return alert("請先選擇餐點");
         
         const itemsStr = cart.map(c => `${c.name} x ${c.qty}`).join(", ");
@@ -528,8 +533,7 @@
         }
     }
 
-    function guestCheckout() { alert("本日老闆請客！\n(It's on the house today. Enjoy!)");
-    }
+    function guestCheckout() { alert("本日老闆請客！\n(It's on the house today. Enjoy!)"); }
     
     init();
 </script>
