@@ -98,7 +98,7 @@
         .item-txt { flex-grow: 1; font-size: 0.9rem;
         }
 
-        /* Summary Table */
+        /* Summary Table (User View) */
         .summary-table { width: 100%;
             border-collapse: collapse; font-size: 0.85rem; background: #fff; }
         .summary-table th { text-align: left;
@@ -111,8 +111,7 @@
             bottom: 25px; left: 20px; right: 20px; background: var(--lv-dark); color: var(--lv-white); padding: 12px 20px; border-radius: 4px; display: flex; justify-content: space-between;
             align-items: center; z-index: 1000; cursor: pointer; transition: 0.2s; }
         .cart-bar:active { opacity: 0.9; }
-        .cart-info { flex-grow: 1; user-select: none; font-size: 0.9rem; }
-        #cart-arrow { margin-right: 8px; font-size: 0.7rem; transition: 0.3s; }
+        .cart-info { flex-grow: 1; user-select: none; }
         .order-btn { background: var(--lv-gold); color: var(--lv-white); border: none;
             padding: 10px 20px; border-radius: 2px; font-size: 0.8rem; font-weight: 600; cursor: pointer; position: relative; z-index: 2;
         }
@@ -133,7 +132,7 @@
         .admin-mode .guest-checkout-btn { display: none;
         }
 
-        /* Cart Details Popup */
+        /* Cart Details Popup (New Feature) */
         .cart-details-panel {
             position: fixed;
             bottom: 85px; 
@@ -239,24 +238,70 @@
     </div>
 </section>
 
-<div id="cart-details" class="cart-details-panel"></div>
+<div id="cart-details" class="cart-details-panel">
+    </div>
 
 <section class="cart-bar" id="cart-bar" onclick="handleCartBarClick(event)">
-    <div class="cart-info">
-        <span id="cart-arrow"></span>SELECTED <span id="cart-count">0</span> &nbsp;&nbsp; $<span id="cart-total">0</span>
-    </div>
+    <div class="cart-info">SELECTED <span id="cart-count">0</span> &nbsp;&nbsp; $<span id="cart-total">0</span></div>
     <button class="order-btn" onclick="submitOrder(event)">PLACE ORDER</button>
 </section>
+
+<!-- 新訂單提示音效 -->
+<audio id="new-order-sound" src="ScreenRecording_02-02-2026 21-26-23_1.m4a" preload="auto"></audio>
 
 <script>
     const SUPABASE_URL = 'https://myrhatzdypiwwgmmfbuw.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_bnnah-2fsCaQnKZDoKNJQw_NuYQVvKi';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // 修改 cart 結構，加入數量屬性： [{name, price, qty}]
     let cart = [];
     let isAdmin = false;
     let fullMenu = [];
-    let currentCategory = ""; 
+    let currentCategory = "";
+    let realtimeChannel = null; // 用於管理 realtime 訂閱
+
+    // --- 音效播放 ---
+    function playNewOrderSound() {
+        const sound = document.getElementById('new-order-sound');
+        if (sound) {
+            sound.currentTime = 0;
+            sound.play().catch(err => {
+                // 瀏覽器自動播放政策可能阻止，靜默處理
+                console.warn('Audio play failed:', err);
+            });
+        }
+    }
+
+    // --- Realtime 訂閱管理 ---
+    function subscribeToNewOrders() {
+        // 避免重複訂閱
+        if (realtimeChannel) return;
+
+        realtimeChannel = _supabase
+            .channel('admin-order-alerts')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'overcooked_orders' },
+                (payload) => {
+                    if (isAdmin) {
+                        playNewOrderSound();
+                        // 若目前在 RECORD 頁，自動刷新
+                        if (currentCategory === 'RECORD') {
+                            generateSummary();
+                        }
+                    }
+                }
+            )
+            .subscribe();
+    }
+
+    function unsubscribeFromNewOrders() {
+        if (realtimeChannel) {
+            _supabase.removeChannel(realtimeChannel);
+            realtimeChannel = null;
+        }
+    }
 
     async function init(targetCategory = null, shouldScrollTop = false) {
         const { data: menuData, error } = await _supabase
@@ -404,6 +449,8 @@
                 isAdmin = true;
                 document.body.classList.add('admin-mode');
                 document.getElementById('mode-status').innerText = "ADMIN MODE";
+                // 登入後開始監聽新訂單
+                subscribeToNewOrders();
                 init(currentCategory, false);
             }
         } else {
@@ -411,11 +458,14 @@
                 isAdmin = false;
                 document.body.classList.remove('admin-mode');
                 document.getElementById('mode-status').innerText = "Casual Dining";
+                // 登出後停止監聽
+                unsubscribeFromNewOrders();
                 init(currentCategory, false);
             }
         }
     }
 
+    // --- 購物車新邏輯：支援數量累加與刪除 ---
     function addToCart(name, price) { 
         const existingItem = cart.find(c => c.name === name);
         if (existingItem) {
@@ -425,12 +475,12 @@
         }
         updateCartUI();
         
+        // 若明細面板已開啟，同步更新畫面
         if(document.getElementById('cart-details').classList.contains('show')) {
             renderCartDetails();
         }
     }
 
-    // --- 核心邏輯：更新箭頭與數量顯示 ---
     function updateCartUI() { 
         const count = cart.reduce((sum, item) => sum + item.qty, 0);
         const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
@@ -438,35 +488,28 @@
         document.getElementById('cart-count').innerText = count; 
         document.getElementById('cart-total').innerText = total;
 
-        const arrowSpan = document.getElementById('cart-arrow');
-        const panel = document.getElementById('cart-details');
-
         if (count === 0) {
-            panel.classList.remove('show');
-            arrowSpan.innerText = "";
-        } else {
-            // 根據面板是否顯示來決定箭頭方向
-            arrowSpan.innerText = panel.classList.contains('show') ? "▼ " : "▲ ";
+            document.getElementById('cart-details').classList.remove('show');
         }
     }
 
+    // --- 點擊過濾邏輯：只在點擊黑色區域時觸發 ---
     function handleCartBarClick(event) {
-        if (event.target.closest('.order-btn')) return;
+        // 如果點擊的是按鈕或其子元素，則不處理面板邏輯，直接交給按鈕的 onclick
+        if (event.target.closest('.order-btn')) {
+            return;
+        }
         toggleCartDetails();
     }
 
     function toggleCartDetails() {
         const panel = document.getElementById('cart-details');
-        const arrowSpan = document.getElementById('cart-arrow');
-        
         if (panel.classList.contains('show')) {
             panel.classList.remove('show');
-            if (cart.length > 0) arrowSpan.innerText = "▲ ";
         } else {
             if (cart.length > 0) {
                 renderCartDetails();
                 panel.classList.add('show');
-                arrowSpan.innerText = "▼ ";
             }
         }
     }
@@ -510,7 +553,9 @@
     }
 
     async function submitOrder(event) {
+        // 防止事件冒泡觸發底層的 handleCartBarClick (雙重保險)
         if(event) event.stopPropagation();
+
         if (cart.length === 0) return alert("請先選擇餐點");
         
         const itemsStr = cart.map(c => `${c.name} x ${c.qty}`).join(", ");
@@ -533,7 +578,8 @@
         }
     }
 
-    function guestCheckout() { alert("本日老闆請客！\n(It's on the house today. Enjoy!)"); }
+    function guestCheckout() { alert("本日老闆請客！\n(It's on the house today. Enjoy!)");
+    }
     
     init();
 </script>
